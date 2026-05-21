@@ -15,61 +15,37 @@ marked.use({
   }
 });
 
-// Configure DOMPurify to allow MathML and SVG elements which KaTeX uses for rendering math
-const purifyConfig = {
-  USE_PROFILES: { html: true },
-  ADD_TAGS: [
-    'math', 'mrow', 'mi', 'mn', 'mo', 'mtext', 'mspace', 'ms', 'mglpyh', 
-    'mpadded', 'mphantom', 'msqrt', 'mroot', 'mstyle', 'merror', 
-    'msub', 'msup', 'msubsup', 'munder', 'mover', 'munderover', 
-    'mmultiscripts', 'mscarries', 'mscarry', 'msline', 'msgroup', 
-    'msrow', 'mstack', 'maction', 'semantics', 'annotation', 'annotation-xml',
-    'svg', 'path', 'line', 'rect', 'circle', 'text', 'g', 'use'
-  ],
-  ADD_ATTR: [
-    'display', 'class', 'style', 'id', 'width', 'height', 'viewBox', 
-    'd', 'x', 'y', 'r', 'cx', 'cy', 'fill', 'stroke', 'stroke-width',
-    'xlink:href', 'points', 'transform'
-  ]
-};
+
 
 /**
  * Extracts and replaces LaTeX math formulas with placeholders
  * so that marked parser doesn't break formulas containing underscores, asterisks, etc.
+ * The placeholders are restored with KaTeX-rendered output AFTER HTML sanitization
+ * to prevent DOMPurify from stripping out CSS styles and MathML tags.
  */
 export function parseMarkdown(text: string): string {
   const mathBlocks: string[] = [];
   const mathInlines: string[] = [];
 
+  // Protect escaped dollar signs \$ from being treated as math delimiters
+  let processedText = text.replace(/\\\$/g, '___ESCAPED_DOLLAR___');
+
   // 1. Extract block math $$ ... $$
-  let processedText = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, mathContent) => {
-    const placeholder = `<!--MATH_BLOCK_${mathBlocks.length}-->`;
-    try {
-      const rendered = katex.renderToString(mathContent.trim(), {
-        displayMode: true,
-        throwOnError: false
-      });
-      mathBlocks.push(rendered);
-    } catch (e) {
-      mathBlocks.push(`<span class="katex-error">${mathContent}</span>`);
-    }
+  processedText = processedText.replace(/\$\$([\s\S]+?)\$\$/g, (_, mathContent) => {
+    const placeholder = `___MATH_BLOCK_${mathBlocks.length}___`;
+    mathBlocks.push(mathContent.replace(/___ESCAPED_DOLLAR___/g, '$'));
     return placeholder;
   });
 
-  // 2. Extract inline math $ ... $ (avoid matching dates like 10$ or expressions with spaces)
-  processedText = processedText.replace(/\$([^$\n]+?)\$/g, (_, mathContent) => {
-    const placeholder = `<!--MATH_INLINE_${mathInlines.length}-->`;
-    try {
-      const rendered = katex.renderToString(mathContent.trim(), {
-        displayMode: false,
-        throwOnError: false
-      });
-      mathInlines.push(rendered);
-    } catch (e) {
-      mathInlines.push(`<span class="katex-error">${mathContent}</span>`);
-    }
+  // 2. Extract inline math $ ... $ (ensures non-empty and handles standard $ delimiters)
+  processedText = processedText.replace(/\$([^\s$][^$\n]*?[^\s$])\$/g, (_, mathContent) => {
+    const placeholder = `___MATH_INLINE_${mathInlines.length}___`;
+    mathInlines.push(mathContent.replace(/___ESCAPED_DOLLAR___/g, '$'));
     return placeholder;
   });
+
+  // Restore remaining escaped dollars back to standard dollars for marked
+  processedText = processedText.replace(/___ESCAPED_DOLLAR___/g, '$');
 
   // 3. Render markdown to HTML
   let rawHtml = '';
@@ -80,18 +56,45 @@ export function parseMarkdown(text: string): string {
     rawHtml = `<p class="error">Parsing error</p>`;
   }
 
-  // 4. Restore math blocks and inlines
-  let finalHtml = rawHtml;
-  mathBlocks.forEach((rendered, index) => {
-    finalHtml = finalHtml.replace(`&lt;!--MATH_BLOCK_${index}--&gt;`, rendered);
-    finalHtml = finalHtml.replace(`<!--MATH_BLOCK_${index}-->`, rendered);
+  // 4. Sanitize HTML first (placeholders are plain alphanumeric texts, so they are 100% safe and retained)
+  const sanitizedHtml = DOMPurify.sanitize(rawHtml);
+
+  // 5. Restore placeholders with actual KaTeX rendered outputs (this prevents DOMPurify from corrupting math styling/MathML)
+  let finalHtml = sanitizedHtml;
+
+  mathBlocks.forEach((mathContent, index) => {
+    let rendered = '';
+    try {
+      rendered = katex.renderToString(mathContent.trim(), {
+        displayMode: true,
+        throwOnError: false
+      });
+    } catch (e) {
+      rendered = `<span class="katex-error">${mathContent}</span>`;
+    }
+    // Try replacing both normal placeholder and any paragraph-wrapped placeholders marked might have created
+    const placeholder = `___MATH_BLOCK_${index}___`;
+    const wrappedPlaceholder = `<p>${placeholder}</p>`;
+    
+    if (finalHtml.includes(wrappedPlaceholder)) {
+      finalHtml = finalHtml.replace(wrappedPlaceholder, rendered);
+    } else {
+      finalHtml = finalHtml.replace(placeholder, rendered);
+    }
   });
 
-  mathInlines.forEach((rendered, index) => {
-    finalHtml = finalHtml.replace(`&lt;!--MATH_INLINE_${index}--&gt;`, rendered);
-    finalHtml = finalHtml.replace(`<!--MATH_INLINE_${index}-->`, rendered);
+  mathInlines.forEach((mathContent, index) => {
+    let rendered = '';
+    try {
+      rendered = katex.renderToString(mathContent.trim(), {
+        displayMode: false,
+        throwOnError: false
+      });
+    } catch (e) {
+      rendered = `<span class="katex-error">${mathContent}</span>`;
+    }
+    finalHtml = finalHtml.replace(`___MATH_INLINE_${index}___`, rendered);
   });
 
-  // 5. Sanitize HTML to prevent XSS
-  return DOMPurify.sanitize(finalHtml, purifyConfig);
+  return finalHtml;
 }

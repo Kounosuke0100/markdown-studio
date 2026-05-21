@@ -5,16 +5,15 @@ import Preview from './components/Preview';
 import ControlPanel from './components/ControlPanel';
 import ExportModal from './components/ExportModal';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { INITIAL_MARKDOWN } from './utils/constants';
 
 function App() {
   // 1. Persisted States via local storage
-  const [markdown, setMarkdown] = useLocalStorage<string>('markdown_content', INITIAL_MARKDOWN);
+  const [markdown, setMarkdown] = useLocalStorage<string>('markdown_content', '');
   const [theme, setTheme] = useLocalStorage<string>('preview_theme', 'github');
   const [padding, setPadding] = useLocalStorage<number>('preview_padding', 24);
   const [borderRadius, setBorderRadius] = useLocalStorage<number>('preview_border_radius', 12);
   const [background, setBackground] = useLocalStorage<string>('preview_background', 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)');
-  const [appTheme, setAppTheme] = useLocalStorage<'light' | 'dark'>('app_theme', 'dark');
+  const [appTheme, setAppTheme] = useLocalStorage<'light' | 'dark'>('app_theme', 'light');
 
   // 2. Local UI States
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');

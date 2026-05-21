@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { 
-  Bold, Italic, Heading, Link, Image, Code, Quote, List, Table, Trash2
+  Bold, Italic, Heading, Link, Image, Code, Quote, List, Table, Trash2, Clipboard
 } from 'lucide-react';
 
 interface EditorProps {
@@ -75,6 +75,32 @@ export const Editor: React.FC<EditorProps> = ({ value, onChange }) => {
     }, 0);
   };
 
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        const textarea = textareaRef.current;
+        if (!textarea) {
+          onChange(value + text);
+          return;
+        }
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const val = textarea.value;
+        const newValue = val.substring(0, start) + text + val.substring(end);
+        onChange(newValue);
+        
+        setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start + text.length, start + text.length);
+        }, 0);
+      }
+    } catch (err) {
+      console.error('Failed to read clipboard contents: ', err);
+      alert('クリップボードの読み取り許可がないか、ブラウザが対応していません。手動でペースト（Ctrl+V / Cmd+V）してください。');
+    }
+  };
+
   const clearEditor = () => {
     if (window.confirm('エディタの内容をすべてクリアしますか？')) {
       onChange('');
@@ -120,6 +146,9 @@ export const Editor: React.FC<EditorProps> = ({ value, onChange }) => {
           <Table size={16} />
         </button>
         <div className="editor-toolbar-divider" style={{ marginLeft: 'auto' }} />
+        <button className="editor-toolbar-btn" onClick={handlePaste} title="ペースト" style={{ color: 'var(--accent-color)', marginRight: '8px' }}>
+          <Clipboard size={16} />
+        </button>
         <button className="editor-toolbar-btn" onClick={clearEditor} title="クリア" style={{ color: '#ef4444' }}>
           <Trash2 size={16} />
         </button>
