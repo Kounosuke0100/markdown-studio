@@ -27,6 +27,21 @@ function App() {
     document.documentElement.setAttribute('data-theme', appTheme);
   }, [appTheme]);
 
+  // Migration: Clear welcome markdown from localStorage if it hasn't been edited
+  useEffect(() => {
+    const rawStored = window.localStorage.getItem('markdown_content');
+    if (rawStored) {
+      try {
+        const parsed = JSON.parse(rawStored);
+        if (typeof parsed === 'string' && (parsed.startsWith('# 📝 Markdown Studio') || parsed.includes('Markdown Studio へようこそ'))) {
+          setMarkdown('');
+        }
+      } catch (e) {
+        // Fallback or ignore
+      }
+    }
+  }, [setMarkdown]);
+
   return (
     <div className="app-container">
       {/* Background ambient glow circles */}
