@@ -1,0 +1,18 @@
+{
+  "name": "Markdown Studio",
+  "short_name": "MD Studio",
+  "description": "美しい画像・PDFエクスポート機能付きマークダウンエディタ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0c10",
+  "theme_color": "#131722",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

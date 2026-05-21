@@ -1,0 +1,454 @@
+/* Markdown Rendering Themes definition */
+
+/* Common Markdown reset inside the preview paper to prevent host styling leak */
+.preview-paper {
+  font-size: 16px;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.preview-paper * {
+  box-sizing: border-box;
+}
+
+.preview-paper p {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.preview-paper h1,
+.preview-paper h2,
+.preview-paper h3,
+.preview-paper h4,
+.preview-paper h5,
+.preview-paper h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.preview-paper h1 { font-size: 2em; border-bottom: 1px solid inherit; padding-bottom: 0.3em; }
+.preview-paper h2 { font-size: 1.5em; border-bottom: 1px solid inherit; padding-bottom: 0.3em; }
+.preview-paper h3 { font-size: 1.25em; }
+.preview-paper h4 { font-size: 1em; }
+
+.preview-paper ul,
+.preview-paper ol {
+  margin-top: 0;
+  margin-bottom: 16px;
+  padding-left: 2em;
+}
+
+.preview-paper li {
+  margin-top: 0.25em;
+}
+
+.preview-paper code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+}
+
+.preview-paper pre {
+  margin-top: 0;
+  margin-bottom: 16px;
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  border-radius: 6px;
+}
+
+.preview-paper pre code {
+  padding: 0;
+  margin: 0;
+  font-size: 100%;
+  word-break: normal;
+  white-space: pre;
+  background: transparent;
+  border: 0;
+}
+
+.preview-paper blockquote {
+  padding: 0 1em;
+  margin: 0 0 16px 0;
+  border-left-width: 4px;
+  border-left-style: solid;
+}
+
+.preview-paper table {
+  display: block;
+  width: 100%;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  margin-top: 0;
+  margin-bottom: 16px;
+  border-collapse: collapse;
+}
+
+.preview-paper table th,
+.preview-paper table td {
+  padding: 6px 13px;
+  border: 1px solid;
+}
+
+.preview-paper table tr {
+  border-top: 1px solid;
+}
+
+.preview-paper hr {
+  height: 0.25em;
+  padding: 0;
+  margin: 24px 0;
+  border: 0;
+}
+
+/* ==========================================
+   1. GitHub Theme (Light Classic)
+   ========================================== */
+.theme-github {
+  background-color: #ffffff;
+  color: #24292f;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.theme-github h1,
+.theme-github h2 {
+  border-bottom: 1px solid #d8dee4;
+}
+
+.theme-github table th,
+.theme-github table td {
+  border-color: #d0d7de;
+}
+
+.theme-github table tr {
+  background-color: #ffffff;
+  border-top-color: #d8dee4;
+}
+
+.theme-github table tr:nth-child(even) {
+  background-color: #f6f8fa;
+}
+
+.theme-github code {
+  background-color: rgba(175, 184, 193, 0.2);
+  color: #24292f;
+}
+
+.theme-github pre {
+  background-color: #f6f8fa;
+}
+
+.theme-github blockquote {
+  color: #57606a;
+  border-left-color: #d0d7de;
+}
+
+.theme-github hr {
+  background-color: #d8dee4;
+}
+
+/* ==========================================
+   2. Sleek Minimal Theme (Modern Typography)
+   ========================================== */
+.theme-minimal {
+  background-color: #fafbfc;
+  color: #1a1a20;
+  font-family: 'Inter', 'Noto Sans JP', -apple-system, sans-serif;
+  letter-spacing: -0.015em;
+  font-size: 15.5px;
+}
+
+.theme-minimal h1,
+.theme-minimal h2,
+.theme-minimal h3,
+.theme-minimal h4 {
+  font-weight: 800;
+  color: #050505;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+}
+
+.theme-minimal h1 {
+  font-size: 2.2em;
+  margin-top: 28px;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.theme-minimal h2 {
+  font-size: 1.55em;
+  margin-top: 22px;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.theme-minimal h3 {
+  font-size: 1.25em;
+  margin-top: 18px;
+}
+
+.theme-minimal code {
+  background-color: #f1f2f4;
+  color: #e11d48; /* Crimson Accent */
+  font-size: 88%;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+.theme-minimal pre {
+  background-color: #f8f9fa;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.015);
+}
+
+.theme-minimal blockquote {
+  color: #4b5563;
+  border-left-color: #111827;
+  border-left-width: 3px;
+  font-style: italic;
+  font-size: 1.05em;
+  padding-left: 1.2em;
+}
+
+.theme-minimal table {
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.theme-minimal table th,
+.theme-minimal table td {
+  border-color: #f3f4f6;
+  padding: 12px 16px;
+}
+
+.theme-minimal table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  color: #111827;
+}
+
+.theme-minimal hr {
+  background-color: #e5e7eb;
+  height: 1px;
+  margin: 32px 0;
+}
+
+/* ==========================================
+   3. Modern Journal (Elegant Serif)
+   ========================================== */
+.theme-journal {
+  background-color: #fbf9f4; /* Warm Cream Ivory */
+  color: #2e2b2a;
+  font-family: 'Playfair Display', 'Noto Serif JP', Georgia, serif;
+  line-height: 1.85;
+  font-size: 16.5px;
+  letter-spacing: 0.02em;
+  padding: 10% 8% !important; /* Elegant margin ratio */
+}
+
+.theme-journal h1,
+.theme-journal h2,
+.theme-journal h3,
+.theme-journal h4 {
+  font-family: 'Playfair Display', 'Noto Serif JP', Georgia, serif;
+  font-weight: 700;
+  color: #1f1c1b;
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+
+.theme-journal h1 {
+  font-size: 2.3em;
+  border-bottom: 2px solid #eae6db;
+  padding-bottom: 14px;
+  margin-top: 32px;
+}
+
+.theme-journal h2 {
+  font-size: 1.7em;
+  border-bottom: none;
+  margin-top: 28px;
+}
+
+.theme-journal h3 {
+  font-size: 1.35em;
+  margin-top: 24px;
+}
+
+.theme-journal code {
+  background-color: rgba(133, 77, 14, 0.06);
+  color: #9a3412;
+  font-size: 90%;
+  border-radius: 3px;
+}
+
+.theme-journal pre {
+  background-color: #f4efe4;
+  border-radius: 6px;
+  border-left: 3px solid #b45309;
+  box-shadow: inset 2px 0 8px rgba(0,0,0,0.02);
+}
+
+.theme-journal blockquote {
+  font-family: 'Playfair Display', 'Noto Serif JP', Georgia, serif;
+  font-style: italic;
+  color: #6b6661;
+  border-left-color: #b45309;
+  border-left-width: 3px;
+  padding-left: 1.8em;
+  margin: 24px 0;
+  font-size: 1.12em;
+  background-color: rgba(244, 239, 228, 0.3);
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-right: 12px;
+  border-radius: 0 6px 6px 0;
+}
+
+.theme-journal table {
+  border-top: 2px solid #3f3935;
+  border-bottom: 2px solid #3f3935;
+  margin: 24px 0;
+}
+
+.theme-journal table th,
+.theme-journal table td {
+  border: none;
+  border-bottom: 1px solid #eae6db;
+  padding: 10px 14px;
+}
+
+.theme-journal table th {
+  border-bottom: 2px solid #3f3935;
+  font-weight: 700;
+  color: #1f1c1b;
+}
+
+.theme-journal hr {
+  background-color: transparent;
+  border-top: 1px solid #eae6db;
+  border-bottom: 1px solid #eae6db;
+  height: 3px;
+  margin: 36px 0;
+}
+
+/* ==========================================
+   4. Dark Neon (Cyberpunk Style)
+   ========================================== */
+.theme-neon {
+  background-color: #090a0f;
+  color: #94a3b8;
+  font-family: 'Fira Code', ui-monospace, monospace;
+  font-size: 14.5px;
+  letter-spacing: -0.2px;
+}
+
+.theme-neon h1,
+.theme-neon h2,
+.theme-neon h3,
+.theme-neon h4 {
+  color: #00f0ff; /* Neon Cyan */
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.4), 0 0 20px rgba(0, 240, 255, 0.15);
+  font-family: 'Fira Code', monospace;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.theme-neon h1 {
+  font-size: 2.1em;
+  border-bottom: 2px solid #ff0055;
+  padding-bottom: 12px;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+.theme-neon h2 {
+  font-size: 1.55em;
+  border-bottom: none;
+  color: #ff0055; /* Neon Pink */
+  text-shadow: 0 0 8px rgba(255, 0, 85, 0.4), 0 0 20px rgba(255, 0, 85, 0.15);
+}
+
+.theme-neon h3 {
+  font-size: 1.25em;
+  color: #39ff14; /* Neon Green */
+  text-shadow: 0 0 6px rgba(57, 255, 20, 0.3);
+}
+
+.theme-neon code {
+  background-color: rgba(255, 0, 85, 0.12);
+  color: #ff0055;
+  border: 1px solid rgba(255, 0, 85, 0.25);
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.theme-neon pre {
+  background-color: #111219;
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.08);
+}
+
+.theme-neon blockquote {
+  color: #39ff14; /* Neon Green */
+  border-left-color: #39ff14;
+  border-left-width: 3px;
+  background-color: rgba(57, 255, 20, 0.04);
+  text-shadow: 0 0 4px rgba(57, 255, 20, 0.15);
+  padding: 12px 18px;
+  border-radius: 0 8px 8px 0;
+}
+
+.theme-neon table {
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.theme-neon table th,
+.theme-neon table td {
+  border-color: #1e293b;
+  padding: 10px 14px;
+}
+
+.theme-neon table th {
+  color: #00f0ff;
+  background-color: rgba(0, 240, 255, 0.03);
+  font-weight: 600;
+}
+
+.theme-neon hr {
+  background: linear-gradient(90deg, rgba(255, 0, 85, 0.8), rgba(0, 240, 255, 0.8));
+  height: 2px;
+  margin: 32px 0;
+  border-radius: 99px;
+}
+
+/* KaTeX adjustments for dark/light themes */
+.theme-neon .katex {
+  color: #00f0ff;
+  text-shadow: 0 0 5px rgba(0, 240, 255, 0.3);
+}
+.theme-journal .katex {
+  color: #9a3412;
+}
+
+/* Syntax Highlighting adjustments within themes */
+.theme-github .hljs { background: transparent; color: #24292f; }
+.theme-github .hljs-keyword { color: #cf222e; font-weight: 600; }
+.theme-github .hljs-string { color: #0a3069; }
+.theme-github .hljs-title { color: #953800; }
+.theme-github .hljs-comment { color: #6e7781; }
+
+.theme-neon .hljs { background: transparent; color: #94a3b8; }
+.theme-neon .hljs-keyword { color: #ff0055; font-weight: 600; }
+.theme-neon .hljs-string { color: #39ff14; }
+.theme-neon .hljs-title { color: #00f0ff; }
+.theme-neon .hljs-comment { color: #475569; font-style: italic; }
