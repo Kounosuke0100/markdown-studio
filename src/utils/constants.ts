@@ -68,5 +68,18 @@ greet('Developer');
 ---
 
 > [!TIP]
-> 画面下のデザインパネルを使って、プレビューのテーマ、余白（Padding）、背景グラデーションを自由に変更してみてください！
 `;
+
+export interface PageSizePreset {
+  id: string;
+  name: string;
+  width: string;
+  height: string;
+}
+
+export const PAGE_SIZE_PRESETS: PageSizePreset[] = [
+  { id: 'a4', name: 'A4', width: '210mm', height: '297mm' },
+  { id: 'a5', name: 'A5', width: '148mm', height: '210mm' },
+  { id: 'b5', name: 'B5', width: '176mm', height: '250mm' },
+  { id: 'letter', name: 'Letter', width: '216mm', height: '279mm' },
+];

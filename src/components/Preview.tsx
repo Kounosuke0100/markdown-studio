@@ -9,6 +9,8 @@ interface PreviewProps {
   borderRadius: number;
   background: string;
   canvasRef: React.RefObject<HTMLDivElement | null>;
+  fontSize: number;
+  pageSize: string;
 }
 
 export const Preview: React.FC<PreviewProps> = ({
@@ -18,6 +20,8 @@ export const Preview: React.FC<PreviewProps> = ({
   borderRadius,
   background,
   canvasRef,
+  fontSize,
+  pageSize,
 }) => {
   // Memoize markdown rendering to optimize performance
   const renderedHtml = useMemo(() => {
@@ -41,6 +45,7 @@ export const Preview: React.FC<PreviewProps> = ({
     width: '100%',
     padding: '32px 24px',
     boxShadow: background === 'transparent' ? 'none' : '0 4px 20px rgba(0,0,0,0.15)',
+    fontSize: `${fontSize}px`,
   };
 
   return (
@@ -54,7 +59,7 @@ export const Preview: React.FC<PreviewProps> = ({
         >
           {/* Inner Paper where Markdown theme is applied */}
           <div 
-            className={`preview-paper theme-${theme}`}
+            className={`preview-paper theme-${theme} size-${pageSize}`}
             style={paperStyle}
             dangerouslySetInnerHTML={{ __html: renderedHtml }}
           />

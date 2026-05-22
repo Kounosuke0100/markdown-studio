@@ -14,6 +14,8 @@ function App() {
   const [borderRadius, setBorderRadius] = useLocalStorage<number>('preview_border_radius', 12);
   const [background, setBackground] = useLocalStorage<string>('preview_background', 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)');
   const [appTheme, setAppTheme] = useLocalStorage<'light' | 'dark'>('app_theme', 'light');
+  const [fontSize, setFontSize] = useLocalStorage<number>('preview_font_size', 16);
+  const [pageSize, setPageSize] = useLocalStorage<string>('preview_page_size', 'a4');
 
   // 2. Local UI States
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
@@ -26,6 +28,27 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);
   }, [appTheme]);
+
+  // Dynamic @page size stylesheet injection for PDF export compatibility
+  useEffect(() => {
+    const styleId = 'print-page-size-style';
+    let styleEl = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!styleEl) {
+      styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+    
+    const printSize = pageSize === 'letter' ? 'letter' : pageSize.toUpperCase();
+    styleEl.innerHTML = `
+      @media print {
+        @page {
+          size: ${printSize} portrait;
+          margin: 15mm;
+        }
+      }
+    `;
+  }, [pageSize]);
 
   // Migration: Clear welcome markdown from localStorage if it hasn't been edited
   useEffect(() => {
@@ -73,6 +96,8 @@ function App() {
             borderRadius={borderRadius}
             background={background}
             canvasRef={canvasRef}
+            fontSize={fontSize}
+            pageSize={pageSize}
           />
           
           <ControlPanel 
@@ -84,6 +109,10 @@ function App() {
             setBorderRadius={setBorderRadius}
             background={background}
             setBackground={setBackground}
+            fontSize={fontSize}
+            setFontSize={setFontSize}
+            pageSize={pageSize}
+            setPageSize={setPageSize}
             onOpenExport={() => setIsExportOpen(true)}
           />
         </div>

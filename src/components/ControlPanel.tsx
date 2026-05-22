@@ -2,7 +2,8 @@ import React from 'react';
 import { Download } from 'lucide-react';
 import { 
   PREVIEW_THEMES, 
-  BACKGROUND_PRESETS
+  BACKGROUND_PRESETS,
+  PAGE_SIZE_PRESETS
 } from '../utils/constants';
 import type { PreviewTheme, BackgroundPreset } from '../utils/constants';
 
@@ -15,6 +16,10 @@ interface ControlPanelProps {
   setBorderRadius: (radius: number) => void;
   background: string;
   setBackground: (bg: string) => void;
+  fontSize: number;
+  setFontSize: (size: number) => void;
+  pageSize: string;
+  setPageSize: (size: string) => void;
   onOpenExport: () => void;
 }
 
@@ -27,11 +32,16 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   setBorderRadius,
   background,
   setBackground,
+  fontSize,
+  setFontSize,
+  pageSize,
+  setPageSize,
   onOpenExport,
 }) => {
   // Calculate percentage fill for input sliders
   const paddingPercent = (padding / 80) * 100;
   const radiusPercent = (borderRadius / 40) * 100;
+  const fontSizePercent = ((fontSize - 12) / (28 - 12)) * 100;
 
   return (
     <div className="control-panel glass">
@@ -72,7 +82,23 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         </div>
       </div>
 
-      {/* 3. Padding and Radius Sliders */}
+      {/* 3. Paper Size Selector */}
+      <div className="control-group">
+        <label className="control-label">用紙サイズ (PDF印刷時)</label>
+        <div className="theme-selector">
+          {PAGE_SIZE_PRESETS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setPageSize(p.id)}
+              className={`theme-chip ${pageSize === p.id ? 'active' : ''}`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. Layout & Typography Sliders */}
       <div className="control-group">
         <div className="slider-controls">
           <div className="slider-item">
@@ -115,10 +141,29 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
               }}
             />
           </div>
+
+          <div className="slider-item slider-item-full">
+            <div className="slider-header">
+              <span className="slider-title">文字サイズ (Font Size)</span>
+              <span className="slider-value">{fontSize}px</span>
+            </div>
+            <input
+              type="range"
+              min="12"
+              max="28"
+              step="1"
+              value={fontSize}
+              onChange={(e) => setFontSize(Number(e.target.value))}
+              className="slider-input"
+              style={{
+                background: `linear-gradient(to right, var(--accent-color) 0%, var(--accent-color) ${fontSizePercent}%, var(--slider-track-bg) ${fontSizePercent}%, var(--slider-track-bg) 100%)`
+              }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* 4. Export Trigger Button */}
+      {/* 5. Export Trigger Button */}
       <button 
         onClick={onOpenExport}
         className="floating-export-btn"

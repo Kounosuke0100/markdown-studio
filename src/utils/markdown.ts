@@ -6,6 +6,7 @@ import katex from 'katex';
 
 // Setup marked renderer with highlight.js integration
 marked.use({
+  breaks: true,
   renderer: {
     code({ text, lang }: { text: string; lang?: string }) {
       const validLanguage = lang && hljs.getLanguage(lang) ? lang : 'plaintext';

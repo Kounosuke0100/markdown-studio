@@ -456,7 +456,29 @@ h1, h2, h3, h4 {
   width: 100%;
   box-sizing: border-box;
   text-align: left;
-  transition: padding 0.3s ease, border-radius 0.3s ease;
+  margin: 0 auto;
+  transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, border-radius 0.3s ease;
+}
+
+/* Paper Size Preview Simulation */
+.preview-paper.size-a4 {
+  max-width: 800px;
+  min-height: 1130px;
+}
+
+.preview-paper.size-a5 {
+  max-width: 565px;
+  min-height: 800px;
+}
+
+.preview-paper.size-b5 {
+  max-width: 680px;
+  min-height: 960px;
+}
+
+.preview-paper.size-letter {
+  max-width: 820px;
+  min-height: 1060px;
 }
 
 /* Control Panel / Design adjustment */
@@ -530,10 +552,15 @@ h1, h2, h3, h4 {
   gap: 20px;
 }
 
+/* Custom Styled Range Input */
 .slider-item {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.slider-item-full {
+  grid-column: span 2;
 }
 
 .slider-header {
@@ -983,6 +1010,10 @@ h1, h2, h3, h4 {
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
   }
 }
 

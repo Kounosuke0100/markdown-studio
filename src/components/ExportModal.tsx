@@ -129,7 +129,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 <FileText size={24} />
               </div>
               <h3 className="export-card-title">PDFで保存 / 印刷</h3>
-              <p className="export-card-desc">文書印刷に適したA4比率の縦型レイアウトでPDF出力します。</p>
+              <p className="export-card-desc">文書印刷に適した、選択した用紙サイズの縦型レイアウトでPDF出力します。</p>
             </button>
           </div>
         )}
