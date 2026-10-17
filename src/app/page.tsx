@@ -5,7 +5,6 @@ import {
   EmptyCanvasIllustration,
   CompilingTypesetterIllustration,
   CompletedPressIllustration,
-  PlayfulEditorialStamp,
 } from '../components/MonolineIllustrations';
 import {
   parseMarkdownToBlocks,
@@ -24,20 +23,13 @@ export type CompileStage = 'idle' | 'compiling' | 'completed';
 
 export type MobileWorkspaceTab = 'editor' | 'preview' | 'studio';
 
-const STORAGE_KEY = 'md2pdf:studio:draft:v1';
+const STORAGE_KEY = 'md2pdf:studio:draft:v2';
 
 interface PersistedDraft {
   markdown: string;
   theme: TypographyTheme;
-  showStamp: boolean;
   documentCode: string;
   savedAt: string;
-}
-
-interface SmallTalkItem {
-  id: string;
-  category: string;
-  text: string;
 }
 
 interface QuickFormatAction {
@@ -45,7 +37,6 @@ interface QuickFormatAction {
   label: string;
   badge: string;
   snippet: string;
-  cursorOffset?: number;
 }
 
 const QUICK_FORMAT_ACTIONS: QuickFormatAction[] = [
@@ -72,35 +63,7 @@ const QUICK_FORMAT_ACTIONS: QuickFormatAction[] = [
   { id: 'hr', label: '区切り線', badge: '―', snippet: '\n---\n' },
 ];
 
-const SMALL_TALK_ITEMS: SmallTalkItem[] = [
-  {
-    id: 'a4-silver-ratio',
-    category: 'PAPER & RATIO',
-    text: 'A4用紙の縦横比（1 : √2）は「白銀比」と呼ばれ、半分に何度折っても美しい相似形が保たれるよう設計されています。',
-  },
-  {
-    id: 'widows-orphans',
-    category: 'TYPESETTING',
-    text: 'ページの先頭や末尾に1行だけ取り残される行を、欧文組版では「Widow（未亡人）」「Orphan（孤児）」と呼び、丁寧な組版では自動で回避します。',
-  },
-  {
-    id: 'margins-breathing',
-    category: 'WHITESPACE',
-    text: '紙面の余白（マージン）は単なる「空き地」ではなく、読者の視線がひと休みし、文字の輪郭を際立たせるための呼吸空間です。',
-  },
-  {
-    id: 'privacy-first',
-    category: 'PRIVACY FIRST',
-    text: 'ここに貼り付けたテキストはどこにも送信されません。あなたのブラウザの中だけで、静かにインクが乗せられます。',
-  },
-  {
-    id: 'optical-kerning',
-    category: 'TYPOGRAPHY',
-    text: '見出しの文字間をほんの少し（-0.02em）引き締めると、黒いインクの塊としての凝集感が生まれ、紙面全体が凛と引き締まります。',
-  },
-];
-
-const INITIAL_SAMPLE_MARKDOWN = `# 思考の断片を、美しい紙面へ。
+const SAMPLE_MARKDOWN = `# 思考の断片を、美しい紙面へ。
 ## プロダクトデザインおよび組版設計リファレンス
 
 AIが紡ぎ出した構造化テキストを、そのまま共有できる**プロフェッショナルな印刷品質のPDF**へと昇華するための組版ドキュメントです。余白の呼吸とソリッドなコントラストが、読み手の集中力を静かに導きます。
@@ -110,17 +73,11 @@ AIが紡ぎ出した構造化テキストを、そのまま共有できる**プ�
 ### 1. 組版エンジンの4つの基本原則
 
 - **Straight（一直線の導線）**: ペーストして、佇まいを確かめ、そのまま紙面へ書き出すだけの明快な体験。
-  - スマートフォンでは親指ひとつで「原稿・紙面・組版室」を行き来できるネイティブドック構造
+  - スマートフォンでは親指ひとつで「原稿・紙面・組版設定」を行き来できるネイティブドック構造
   - ショートカット（\`Cmd/Ctrl + Enter\`）による即時コンパイル
 - **Minimal（余白の贅沢）**: 装飾を削ぎ落とし、文字のジャンプ率と行間のリズムだけで知性を表現する。
 - **Contrast（白と黒の規律）**: 曖昧なグラデーションを排し、\`#111111\` のインクと \`#FFFFFF\` の紙面で輪郭を際立たせる。
 - **Playful（知的なあそび心）**: 張り詰めた紙面に、ひとさじのユーモアと手仕事の温もりを添える。
-
-#### 出稿前組版チェックリスト
-
-- [x] 見出し直後の孤立改ページ防止（\`break-after: avoid-page\`）
-- [x] 表組み・コードブロックの途中分断防止（\`break-inside: avoid\`）
-- [ ] 最終ページの検印スタンプ（FINE PRESS）の刻印有無を確認
 
 ### 2. タイポグラフィとレイアウト仕様の比較
 
@@ -142,24 +99,18 @@ interface PrintSpec {
 
 export function compileToPaper(title: string, spec: PrintSpec): string {
   const timestamp = new Date().toISOString().slice(0, 10);
-  // ブラウザの印刷パイプラインを通じてベクターPDFを生成
   return \`[\${timestamp}] Ready to press: \${title} (\${spec.paperSize})\`;
 }
-\`\`\`
-
-1. 原稿タブに任意のMarkdownテキストを貼り付けるか、クイックチップで記法を挿入します。
-2. 紙面タブまたは上部ピルから、原稿のトーンに合わせて組版テーマを切り替えます。
-3. **「PDF出力」**を押し、印刷・共有メニューで「PDFに保存」を選ぶだけで完成です。`;
+\`\`\``;
 
 /* ==========================================================================
    2. MAIN APPLICATION COMPONENT (md2pdf)
    ========================================================================== */
 export default function Md2PdfStudioPage() {
-  const [markdown, setMarkdown] = useState<string>(INITIAL_SAMPLE_MARKDOWN);
+  // Initial canvas is completely blank ('')
+  const [markdown, setMarkdown] = useState<string>('');
   const [theme, setTheme] = useState<TypographyTheme>('monochrome-sans');
-  const [showStamp, setShowStamp] = useState<boolean>(true);
   const [documentCode, setDocumentCode] = useState<string>('DOC-A4-01');
-  const [smallTalkIndex, setSmallTalkIndex] = useState<number>(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [compileStage, setCompileStage] = useState<CompileStage>('idle');
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
@@ -207,9 +158,6 @@ export default function Md2PdfStudioPage() {
         ) {
           setTheme(parsed.theme);
         }
-        if (typeof parsed.showStamp === 'boolean') {
-          setShowStamp(parsed.showStamp);
-        }
         if (typeof parsed.documentCode === 'string') {
           setDocumentCode(parsed.documentCode);
         }
@@ -233,7 +181,6 @@ export default function Md2PdfStudioPage() {
       const payload: PersistedDraft = {
         markdown,
         theme,
-        showStamp,
         documentCode,
         savedAt: timeStr,
       };
@@ -242,7 +189,7 @@ export default function Md2PdfStudioPage() {
     } catch {
       // Ignore quota or private browsing errors
     }
-  }, [markdown, theme, showStamp, documentCode, isHydrated]);
+  }, [markdown, theme, documentCode, isHydrated]);
 
   // Fallback light-dismiss for browsers without native <dialog closedby="any"> support
   useEffect(() => {
@@ -464,18 +411,11 @@ export default function Md2PdfStudioPage() {
   // Handle loading sample AI markdown
   const handleLoadSample = () => {
     triggerHaptic();
-    setMarkdown(INITIAL_SAMPLE_MARKDOWN);
+    setMarkdown(SAMPLE_MARKDOWN);
     setDocumentCode('DOC-A4-01');
     showGentleToast('サンプルの組版原稿をセットしました。');
   };
 
-  // Handle rotating Small Talk
-  const handleNextSmallTalk = () => {
-    triggerHaptic();
-    setSmallTalkIndex((prev) => (prev + 1) % SMALL_TALK_ITEMS.length);
-  };
-
-  const currentSmallTalk = SMALL_TALK_ITEMS[smallTalkIndex];
   const isEmpty = markdown.trim().length === 0;
 
   return (
@@ -502,7 +442,7 @@ export default function Md2PdfStudioPage() {
               <p className="hidden sm:block text-xs text-[#555555] mt-0.5 truncate">
                 思考の断片を、デザイナーが組版したような美しい紙面へ。
               </p>
-              <p className="sm:hidden text-[10px] font-mono text-[#555555] truncate max-w-[140px]">
+              <p className="sm:hidden text-[10px] font-mono text-[#555555] truncate max-w-[160px]">
                 {isEmpty ? '白紙キャンバス' : `${extractedTitle}.pdf`}
               </p>
             </div>
@@ -519,7 +459,7 @@ export default function Md2PdfStudioPage() {
             </span>
           </div>
 
-          {/* Mobile Quick Pill Controls (Visible < 1024px) */}
+          {/* Mobile Quick Pill Control (Visible < 1024px) */}
           <div className="flex lg:hidden items-center gap-1.5">
             <button
               type="button"
@@ -532,27 +472,10 @@ export default function Md2PdfStudioPage() {
                 );
               }}
               aria-label="組版書体テーマを切り替え"
-              className="px-2.5 py-1.5 text-[11px] font-extrabold border-[1.5px] border-[#111111] bg-[#FAFAFA] shadow-[2px_2px_0px_0px_#111111] active:translate-x-[1px] active:translate-y-[1px] flex items-center gap-1"
+              className="px-2.5 py-1.5 text-[11px] font-extrabold border-[1.5px] border-[#111111] bg-[#FAFAFA] shadow-[2px_2px_0px_0px_#111111] active:translate-x-[1px] active:translate-y-[1px] flex items-center gap-1.5"
             >
               <span className="w-1.5 h-1.5 bg-[#111111] inline-block" />
               <span>{theme === 'monochrome-sans' ? 'ゴシック' : '明朝体'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic();
-                setShowStamp((prev) => !prev);
-              }}
-              aria-pressed={showStamp}
-              aria-label="検印スタンプのON/OFF"
-              className={`px-2 py-1.5 text-[11px] font-mono font-bold border-[1.5px] border-[#111111] transition-colors ${
-                showStamp
-                  ? 'bg-[#111111] text-[#E6FF00] shadow-[2px_2px_0px_0px_#E6FF00]'
-                  : 'bg-[#FFFFFF] text-[#555555]'
-              }`}
-            >
-              {showStamp ? '★印' : '☆印'}
             </button>
           </div>
 
@@ -588,20 +511,6 @@ export default function Md2PdfStudioPage() {
               </button>
             </div>
 
-            {/* Playful Stamp Toggle */}
-            <button
-              type="button"
-              onClick={() => setShowStamp((prev) => !prev)}
-              aria-pressed={showStamp}
-              className={`px-3 py-1.5 text-xs font-bold border-2 border-[#111111] transition-transform active:translate-x-[1px] active:translate-y-[1px] ${
-                showStamp
-                  ? 'bg-[#111111] text-[#FFFFFF] shadow-[3px_3px_0px_0px_#E6FF00]'
-                  : 'bg-[#FFFFFF] text-[#111111] shadow-[3px_3px_0px_0px_#111111]'
-              }`}
-            >
-              {showStamp ? '★ 検印スタンプ ON' : '☆ 検印スタンプ OFF'}
-            </button>
-
             {/* Primary Compile Action Button */}
             <button
               type="button"
@@ -618,7 +527,7 @@ export default function Md2PdfStudioPage() {
         </div>
       </header>
 
-      {/* Gentle Floating Microcopy Toast (.no-print) - Positioned above mobile dock on phones */}
+      {/* Gentle Floating Microcopy Toast (.no-print) */}
       {toastMessage && (
         <div
           role="status"
@@ -658,7 +567,7 @@ export default function Md2PdfStudioPage() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className="relative flex-1 flex flex-col bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] min-h-[calc(100dvh-13.5rem)] lg:min-h-[540px]"
+            className="relative flex-1 flex flex-col bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] min-h-[calc(100dvh-13.5rem)] lg:min-h-[600px]"
           >
             {/* Drag & Drop Active Overlay */}
             {isDraggingFile && (
@@ -713,7 +622,7 @@ export default function Md2PdfStudioPage() {
               </div>
             </div>
 
-            {/* 1-Tap Quick Markdown Format Chip Bar (Smartphone & Tablet friendly) */}
+            {/* 1-Tap Quick Markdown Format Chip Bar */}
             <div
               aria-label="Markdownクイック挿入バー"
               className="px-3 py-2 border-b-[1.5px] border-[#111111] bg-[#FFFFFF] flex items-center gap-1.5 overflow-x-auto no-scrollbar"
@@ -736,14 +645,14 @@ export default function Md2PdfStudioPage() {
               ))}
             </div>
 
-            {/* Desktop Header Code Input Bar */}
+            {/* Header Code Input Bar */}
             <div className="hidden sm:flex px-4 py-2 border-b-[1.5px] border-[#111111] bg-[#FFFFFF] flex-wrap items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-2">
                 <label
                   htmlFor="doc-code-input"
                   className="font-mono text-[#555555] shrink-0"
                 >
-                  紙面ヘッダー刻印:
+                  刻印コード:
                 </label>
                 <input
                   id="doc-code-input"
@@ -826,43 +735,15 @@ export default function Md2PdfStudioPage() {
               </div>
             </div>
           </div>
-
-          {/* Built-in "Small Talk" (組版の豆知識) Bar on Desktop */}
-          <aside
-            aria-label="Small Talk 組版の豆知識"
-            className="hidden lg:flex bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] p-4 items-start justify-between gap-4"
-          >
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="px-1.5 py-0.5 text-[10px] font-mono font-extrabold bg-[#E6FF00] border border-[#111111]">
-                  SMALL TALK
-                </span>
-                <span className="text-[11px] font-mono font-bold text-[#555555]">
-                  {currentSmallTalk.category}
-                </span>
-              </div>
-              <p className="text-xs text-[#111111] leading-relaxed pt-0.5">
-                {currentSmallTalk.text}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleNextSmallTalk}
-              title="別の豆知識を読む"
-              className="shrink-0 px-2.5 py-1.5 text-xs font-mono font-bold bg-[#FAFAFA] border-[1.5px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] hover:bg-[#E6FF00] active:translate-x-[1px] active:translate-y-[1px] transition-colors"
-            >
-              次へ →
-            </button>
-          </aside>
         </section>
 
         {/* ------------------------------------------------------------------
-            MOBILE TAB 03: TYPESETTING STUDIO & SMALL TALK LOUNGE (.no-print)
+            MOBILE TAB 03: TYPESETTING STUDIO SETTINGS (.no-print)
             Visible only on Smartphone when activeMobileTab === 'studio'
             ------------------------------------------------------------------ */}
         {activeMobileTab === 'studio' && (
           <section
-            aria-label="組版設定と豆知識"
+            aria-label="組版設定"
             className="no-print lg:hidden flex flex-col gap-4"
           >
             {/* Typography Theme Card */}
@@ -929,11 +810,11 @@ export default function Md2PdfStudioPage() {
               </div>
             </div>
 
-            {/* Stamp & Header Metadata Card */}
-            <div className="bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] p-4 space-y-4">
+            {/* Document Code Card */}
+            <div className="bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-mono font-extrabold uppercase px-2 py-0.5 bg-[#111111] text-[#FFFFFF]">
-                  PAPER DETAILS
+                  DOCUMENT CODE
                 </span>
                 <span className="text-[11px] font-mono text-[#555555]">
                   刻印とファイル名
@@ -945,7 +826,7 @@ export default function Md2PdfStudioPage() {
                   htmlFor="mobile-doc-code-input"
                   className="block text-xs font-bold text-[#111111]"
                 >
-                  紙面ヘッダー刻印コード
+                  刻印コード（空欄で非表示）
                 </label>
                 <input
                   id="mobile-doc-code-input"
@@ -961,59 +842,7 @@ export default function Md2PdfStudioPage() {
                   <strong className="text-[#111111]">{extractedTitle}.pdf</strong>
                 </p>
               </div>
-
-              <div className="pt-2 border-t border-[#111111] flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-extrabold">
-                    FINE PRESS エディトリアル検印スタンプ
-                  </p>
-                  <p className="text-[11px] text-[#555555]">
-                    A4紙面の右上にオリジナルモノライン検印を刻印します
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic();
-                    setShowStamp((prev) => !prev);
-                  }}
-                  className={`px-3.5 py-2 text-xs font-mono font-extrabold border-2 border-[#111111] shrink-0 ${
-                    showStamp
-                      ? 'bg-[#E6FF00] text-[#111111] shadow-[2px_2px_0px_0px_#111111]'
-                      : 'bg-[#FAFAFA] text-[#555555]'
-                  }`}
-                >
-                  {showStamp ? '★ ON' : '☆ OFF'}
-                </button>
-              </div>
             </div>
-
-            {/* Small Talk Card on Mobile */}
-            <aside
-              aria-label="Small Talk 組版の豆知識"
-              className="bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] p-4 flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="px-1.5 py-0.5 text-[10px] font-mono font-extrabold bg-[#E6FF00] border border-[#111111]">
-                    SMALL TALK
-                  </span>
-                  <span className="text-[11px] font-mono font-bold text-[#555555]">
-                    {currentSmallTalk.category}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleNextSmallTalk}
-                  className="px-2.5 py-1 text-xs font-mono font-bold bg-[#FAFAFA] border-[1.5px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] active:bg-[#E6FF00]"
-                >
-                  別の豆知識へ →
-                </button>
-              </div>
-              <p className="text-xs text-[#111111] leading-relaxed">
-                {currentSmallTalk.text}
-              </p>
-            </aside>
           </section>
         )}
 
@@ -1069,25 +898,12 @@ export default function Md2PdfStudioPage() {
                   : 'theme-minimal-editorial'
               } ${mobileCompactScale ? 'mobile-compact-scale' : ''}`}
             >
-              {/* Optional Playful Stamp on Top Right of Sheet */}
-              {showStamp && !isEmpty && (
-                <div className="float-right ml-3 sm:ml-4 mb-2 -mt-1 sm:-mt-2 select-none">
-                  <PlayfulEditorialStamp
-                    className="w-14 h-14 sm:w-20 sm:h-20"
-                    editionLabel="FINE PRESS"
-                  />
+              {/* Minimal Document Code Only (No Header Bar / No Footer) */}
+              {documentCode.trim().length > 0 && (
+                <div className="mb-4 text-[7.5pt] sm:text-[8pt] font-mono tracking-widest uppercase text-[#555555]">
+                  {documentCode.trim()}
                 </div>
               )}
-
-              {/* Subtle Editorial Running Header */}
-              <div className="flex items-center justify-between border-b border-[#111111] pb-2 mb-5 sm:mb-6 text-[7.5pt] sm:text-[8pt] font-mono tracking-widest uppercase text-[#555555] gap-2">
-                <span className="truncate">{documentCode || 'MD2PDF STUDIO'}</span>
-                <span className="shrink-0">
-                  {theme === 'monochrome-sans'
-                    ? 'SPEC // SANS'
-                    : 'SPEC // EDITORIAL'}
-                </span>
-              </div>
 
               {/* Rendered Content or Blank Sheet Hint */}
               {isEmpty ? (
@@ -1096,7 +912,7 @@ export default function Md2PdfStudioPage() {
                     [ BLANK A4 SHEET ]
                   </p>
                   <p className="text-xs">
-                    原稿タブでテキストを入力すると、ここにリアルタイムで組版されます。
+                    原稿を入力すると、ここにリアルタイムで組版されます。
                   </p>
                 </div>
               ) : (
@@ -1203,12 +1019,6 @@ export default function Md2PdfStudioPage() {
                   })}
                 </div>
               )}
-
-              {/* Subtle Editorial Running Footer */}
-              <footer className="mt-10 sm:mt-12 pt-3 border-t border-[#111111] flex items-center justify-between text-[7pt] sm:text-[7.5pt] font-mono text-[#555555]">
-                <span>TYPESET BY MD2PDF — CLIENT-SIDE VECTOR ENGINE</span>
-                <span>A4 STANDARD</span>
-              </footer>
             </article>
           </div>
         </section>
@@ -1293,7 +1103,7 @@ export default function Md2PdfStudioPage() {
                 03 STUDIO
               </span>
               <span className="text-xs font-extrabold leading-none">
-                組版・豆知識
+                組版設定
               </span>
             </button>
           </div>
