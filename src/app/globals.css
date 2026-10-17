@@ -1,0 +1,375 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   1. DESIGN TOKENS & TYPOGRAPHY VARIABLES
+   ========================================================================== */
+:root {
+  --bg-pure: #FFFFFF;
+  --bg-canvas: #FAFAFA;
+  --ink-black: #111111;
+  --ink-muted: #555555;
+  --ink-subtle: #E5E5E5;
+  --accent-acid: #E6FF00;
+
+  --font-sans: var(--font-inter), var(--font-noto-sans-jp), 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: var(--font-newsreader), var(--font-shippori-mincho), 'Newsreader', 'Shippori Mincho', 'Hiragino Mincho ProN', serif;
+  --font-mono: var(--font-jetbrains-mono), 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-canvas);
+  color: var(--ink-black);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "palt" 1, "kern" 1;
+}
+
+/* Selection highlight in Acid Yellow */
+::selection {
+  background-color: var(--accent-acid);
+  color: var(--ink-black);
+}
+
+/* ==========================================================================
+   2. NATIVE MODAL DIALOG & SCROLL CONTAINMENT
+   ========================================================================== */
+dialog.md2pdf-dialog {
+  padding: 0;
+  border: 2px solid #111111;
+  background: #FFFFFF;
+  color: #111111;
+  box-shadow: 8px 8px 0px 0px #111111;
+  max-width: 28rem;
+  width: calc(100% - 2rem);
+  margin: auto;
+}
+
+dialog.md2pdf-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog.md2pdf-dialog::backdrop {
+  background-color: rgba(17, 17, 17, 0.65);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+/* ==========================================================================
+   3. SCREEN A4 SHEET PREVIEW CONTAINER & TYPOGRAPHY THEMES
+   ========================================================================== */
+.a4-preview-sheet {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 20mm 18mm 22mm 18mm;
+  background-color: #FFFFFF;
+  color: #111111;
+  position: relative;
+  margin: 0 auto;
+  border: 2px solid #111111;
+  box-shadow: 6px 6px 0px 0px #111111;
+  font-feature-settings: "palt" 1, "kern" 1;
+  line-break: strict;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.theme-monochrome-sans {
+  font-family: var(--font-sans);
+  line-height: 1.75;
+  letter-spacing: 0.015em;
+}
+
+.theme-minimal-editorial {
+  font-family: var(--font-serif);
+  line-height: 1.85;
+  letter-spacing: 0.025em;
+}
+
+/* Editorial Typographic Scale inside A4 Sheet */
+.md2pdf-prose h1 {
+  font-size: 22pt;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin-top: 0;
+  margin-bottom: 14pt;
+  padding-bottom: 8pt;
+  border-bottom: 2px solid #111111;
+}
+
+.md2pdf-prose h2 {
+  font-size: 14.5pt;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  margin-top: 20pt;
+  margin-bottom: 8pt;
+  padding-left: 8pt;
+  border-left: 3.5px solid #111111;
+}
+
+.md2pdf-prose h3 {
+  font-size: 11.5pt;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-top: 14pt;
+  margin-bottom: 6pt;
+}
+
+.md2pdf-prose h4 {
+  font-size: 10.5pt;
+  font-weight: 700;
+  line-height: 1.45;
+  margin-top: 11pt;
+  margin-bottom: 4pt;
+}
+
+.md2pdf-prose h5,
+.md2pdf-prose h6 {
+  font-size: 9.5pt;
+  font-weight: 700;
+  line-height: 1.45;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #555555;
+  margin-top: 9pt;
+  margin-bottom: 3pt;
+}
+
+.md2pdf-prose p {
+  font-size: 10pt;
+  margin-top: 0;
+  margin-bottom: 9pt;
+  text-align: justify;
+}
+
+.md2pdf-prose ul,
+.md2pdf-prose ol {
+  font-size: 10pt;
+  margin-top: 0;
+  margin-bottom: 10pt;
+  padding-left: 16pt;
+}
+
+.md2pdf-prose li > ul,
+.md2pdf-prose li > ol {
+  margin-top: 3pt;
+  margin-bottom: 3pt;
+  padding-left: 14pt;
+}
+
+.md2pdf-prose li {
+  margin-bottom: 4pt;
+}
+
+.md2pdf-prose figure {
+  margin: 12pt 0;
+  padding: 8pt;
+  border: 1.5px solid #111111;
+  background-color: #FAFAFA;
+}
+
+.md2pdf-prose figcaption {
+  margin-top: 5pt;
+  font-size: 8.5pt;
+  font-family: var(--font-mono);
+  color: #555555;
+  text-align: center;
+}
+
+.md2pdf-prose blockquote {
+  margin: 12pt 0;
+  padding: 9pt 12pt;
+  border: 1.5px solid #111111;
+  border-left: 4px solid #111111;
+  background-color: #FAFAFA;
+  font-size: 9.5pt;
+}
+
+.md2pdf-prose pre {
+  margin: 12pt 0;
+  padding: 10pt 12pt;
+  border: 1.5px solid #111111;
+  background-color: #FAFAFA;
+  font-family: var(--font-mono);
+  font-size: 8.5pt;
+  line-height: 1.55;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.md2pdf-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.md2pdf-prose :not(pre) > code {
+  padding: 1pt 4pt;
+  border: 1px solid #111111;
+  background-color: #FAFAFA;
+}
+
+.md2pdf-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14pt 0;
+  font-size: 9pt;
+  border: 1.5px solid #111111;
+}
+
+.md2pdf-prose th {
+  background-color: #111111;
+  color: #FFFFFF;
+  font-weight: 700;
+  text-align: left;
+  padding: 6pt 8pt;
+  border: 1px solid #111111;
+}
+
+.md2pdf-prose td {
+  padding: 6pt 8pt;
+  border: 1px solid #111111;
+  vertical-align: top;
+}
+
+.md2pdf-prose tbody tr:nth-child(even) {
+  background-color: #FAFAFA;
+}
+
+.md2pdf-prose hr {
+  border: none;
+  border-top: 1.5px solid #111111;
+  margin: 16pt 0;
+}
+
+/* ==========================================================================
+   4. PROFESSIONAL PRINT & PDF COMPILATION CSS (@page & @media print)
+   ========================================================================== */
+@page {
+  size: A4 portrait;
+  margin: 18mm 16mm 18mm 16mm;
+}
+
+@media print {
+  /* Force exact background and ink colors in vector PDF output */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  html,
+  body {
+    width: 210mm;
+    background-color: #FFFFFF !important;
+    color: #111111 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Completely hide all web UI controls, editors, headers, and modals */
+  .no-print,
+  dialog.md2pdf-dialog {
+    display: none !important;
+  }
+
+  /* Reset layout wrappers so the print flow occupies 100% of the @page box */
+  .print-root,
+  .print-workspace,
+  .print-pane-right,
+  .print-canvas-scroller {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  /* Transform A4 preview container into pure print document flow */
+  .a4-preview-sheet {
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background-color: #FFFFFF !important;
+  }
+
+  /* Strict Page-Break & Typesetting Protection Rules */
+  .md2pdf-prose h1,
+  .md2pdf-prose h2,
+  .md2pdf-prose h3,
+  .md2pdf-prose h4,
+  .md2pdf-prose h5,
+  .md2pdf-prose h6 {
+    break-after: avoid-page !important;
+    page-break-after: avoid !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .md2pdf-prose pre,
+  .md2pdf-prose blockquote,
+  .md2pdf-prose table,
+  .md2pdf-prose figure,
+  .md2pdf-prose .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    max-width: 100% !important;
+  }
+
+  .md2pdf-prose thead {
+    display: table-header-group !important;
+  }
+
+  .md2pdf-prose tfoot {
+    display: table-footer-group !important;
+  }
+
+  .md2pdf-prose tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .md2pdf-prose img,
+  .md2pdf-prose svg {
+    max-width: 100% !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .md2pdf-prose a {
+    color: #111111 !important;
+    text-decoration: underline !important;
+  }
+
+  /* Orphan and Widow control for editorial paragraph flow */
+  .md2pdf-prose p,
+  .md2pdf-prose li {
+    orphans: 3;
+    widows: 3;
+  }
+}

@@ -1,40 +1,27 @@
 {
-  "name": "eager-rutherford",
+  "name": "md2pdf",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "description": "AIが出力したMarkdownテキストを、プロフェッショナルな印刷品質のPDFへと瞬時に組版・コンパイルするWebサービス",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "node --test src/lib/__tests__/*.test.ts"
   },
   "dependencies": {
-    "canvas-confetti": "^1.9.4",
-    "dompurify": "^3.4.5",
-    "highlight.js": "^11.11.1",
-    "html2canvas": "^1.4.1",
-    "katex": "^0.16.47",
-    "lucide-react": "^1.16.0",
-    "marked": "^18.0.4",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/canvas-confetti": "^1.9.0",
-    "@types/dompurify": "^3.0.5",
-    "@types/katex": "^0.16.8",
-    "@types/node": "^24.12.3",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^10.3.0",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.6.0",
-    "typescript": "~6.0.2",
-    "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2"
   }
 }
