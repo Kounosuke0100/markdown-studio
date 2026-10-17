@@ -48,6 +48,8 @@ export const viewport: Viewport = {
   themeColor: '#111111',
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
 };
 
 export const metadata: Metadata = {
@@ -58,6 +60,14 @@ export const metadata: Metadata = {
   description:
     'AIが出力したMarkdownテキストを、プロフェッショナルな印刷品質のPDFへと瞬時に組版・コンパイルするクライアント完結型スタジオ。',
   applicationName: 'md2pdf Typeset Studio',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'md2pdf',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   keywords: [
     'Markdown to PDF',
     'CSS組版',
@@ -92,7 +102,7 @@ export default function RootLayout({
       lang="ja"
       className={`${inter.variable} ${notoSansJP.variable} ${newsreader.variable} ${shipporiMincho.variable} ${jetbrainsMono.variable}`}
     >
-      <body className="min-h-screen bg-[#FAFAFA] text-[#111111] antialiased selection:bg-[#E6FF00] selection:text-[#111111]">
+      <body className="min-h-dvh bg-[#FAFAFA] text-[#111111] antialiased selection:bg-[#E6FF00] selection:text-[#111111] overscroll-y-none">
         {children}
       </body>
     </html>

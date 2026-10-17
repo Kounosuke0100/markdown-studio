@@ -22,6 +22,8 @@ export type TypographyTheme = 'monochrome-sans' | 'minimal-editorial';
 
 export type CompileStage = 'idle' | 'compiling' | 'completed';
 
+export type MobileWorkspaceTab = 'editor' | 'preview' | 'studio';
+
 const STORAGE_KEY = 'md2pdf:studio:draft:v1';
 
 interface PersistedDraft {
@@ -37,6 +39,38 @@ interface SmallTalkItem {
   category: string;
   text: string;
 }
+
+interface QuickFormatAction {
+  id: string;
+  label: string;
+  badge: string;
+  snippet: string;
+  cursorOffset?: number;
+}
+
+const QUICK_FORMAT_ACTIONS: QuickFormatAction[] = [
+  { id: 'h1', label: '大見出し', badge: 'H1', snippet: '\n# 見出しタイトル\n' },
+  { id: 'h2', label: '中見出し', badge: 'H2', snippet: '\n## セクション見出し\n' },
+  { id: 'h3', label: '小見出し', badge: 'H3', snippet: '\n### サブセクション\n' },
+  { id: 'bold', label: '太字', badge: 'B', snippet: '**強調テキスト**' },
+  { id: 'list', label: '箇条書き', badge: '•', snippet: '\n- リスト項目\n' },
+  { id: 'task', label: 'チェック', badge: '✓', snippet: '\n- [ ] 確認項目\n' },
+  { id: 'quote', label: '引用', badge: '“', snippet: '\n> 印象的な一節をここに引用します。\n' },
+  {
+    id: 'code',
+    label: 'コード',
+    badge: '</>',
+    snippet: '\n```typescript\nconst status = "ready";\n```\n',
+  },
+  {
+    id: 'table',
+    label: '表組み',
+    badge: '田',
+    snippet:
+      '\n| 項目 | 内容 | 備考 |\n| :--- | :--- | :--- |\n| 要素A | 仕様テキスト | 完了 |\n',
+  },
+  { id: 'hr', label: '区切り線', badge: '―', snippet: '\n---\n' },
+];
 
 const SMALL_TALK_ITEMS: SmallTalkItem[] = [
   {
@@ -76,7 +110,7 @@ AIが紡ぎ出した構造化テキストを、そのまま共有できる**プ�
 ### 1. 組版エンジンの4つの基本原則
 
 - **Straight（一直線の導線）**: ペーストして、佇まいを確かめ、そのまま紙面へ書き出すだけの明快な体験。
-  - 視線移動を最小化する2ペイン・スプリット構造
+  - スマートフォンでは親指ひとつで「原稿・紙面・組版室」を行き来できるネイティブドック構造
   - ショートカット（\`Cmd/Ctrl + Enter\`）による即時コンパイル
 - **Minimal（余白の贅沢）**: 装飾を削ぎ落とし、文字のジャンプ率と行間のリズムだけで知性を表現する。
 - **Contrast（白と黒の規律）**: 曖昧なグラデーションを排し、\`#111111\` のインクと \`#FFFFFF\` の紙面で輪郭を際立たせる。
@@ -113,9 +147,9 @@ export function compileToPaper(title: string, spec: PrintSpec): string {
 }
 \`\`\`
 
-1. 左ペインに任意のMarkdownテキストを貼り付けるか、\`.md\` ファイルをドロップします。
-2. 上部バーから原稿のトーンに合わせて組版テーマを切り替えます。
-3. **「PDFにコンパイルする」**を押し、印刷ダイアログで「PDFに保存」を選ぶだけで完成です。`;
+1. 原稿タブに任意のMarkdownテキストを貼り付けるか、クイックチップで記法を挿入します。
+2. 紙面タブまたは上部ピルから、原稿のトーンに合わせて組版テーマを切り替えます。
+3. **「PDF出力」**を押し、印刷・共有メニューで「PDFに保存」を選ぶだけで完成です。`;
 
 /* ==========================================================================
    2. MAIN APPLICATION COMPONENT (md2pdf)
@@ -132,18 +166,33 @@ export default function Md2PdfStudioPage() {
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
   const [isDraggingFile, setIsDraggingFile] = useState<boolean>(false);
 
+  // Smartphone-native navigation & view states
+  const [activeMobileTab, setActiveMobileTab] =
+    useState<MobileWorkspaceTab>('editor');
+  const [mobileCompactScale, setMobileCompactScale] = useState<boolean>(false);
+
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const triggerHaptic = useCallback((ms = 8) => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(ms);
+      } catch {
+        // Ignore on unsupported devices
+      }
+    }
+  }, []);
 
   const showGentleToast = useCallback((msg: string) => {
     setToastMessage(msg);
     window.setTimeout(() => {
       setToastMessage((prev) => (prev === msg ? null : prev));
-    }, 2800);
+    }, 2600);
   }, []);
 
-  // Phase 3-1: Restore draft from localStorage on client mount
+  // Restore draft from localStorage on client mount
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -175,7 +224,7 @@ export default function Md2PdfStudioPage() {
     }
   }, []);
 
-  // Phase 3-1: Auto-save draft changes to localStorage
+  // Auto-save draft changes to localStorage
   useEffect(() => {
     if (!isHydrated) return;
     try {
@@ -231,7 +280,7 @@ export default function Md2PdfStudioPage() {
   // Parse Markdown blocks in real time
   const blocks = useMemo(() => parseMarkdownToBlocks(markdown), [markdown]);
 
-  // Phase 2-2: Automatically synchronize document.title with H1 for clean PDF filenames
+  // Automatically synchronize document.title with H1 for clean PDF filenames
   const extractedTitle = useMemo(
     () => extractDocumentTitle(blocks, documentCode),
     [blocks, documentCode]
@@ -250,20 +299,22 @@ export default function Md2PdfStudioPage() {
   const metrics = useMemo(() => {
     const trimmed = markdown.trim();
     if (!trimmed) {
-      return { chars: 0, lines: 0, headings: 0 };
+      return { chars: 0, lines: 0, headings: 0, blocksCount: 0 };
     }
     const chars = trimmed.length;
     const lines = trimmed.split(/\r\n|\r|\n/).length;
     const headings = blocks.filter((b) => b.type === 'heading').length;
-    return { chars, lines, headings };
+    return { chars, lines, headings, blocksCount: blocks.length };
   }, [markdown, blocks]);
 
   // Trigger PDF Compilation Flow
   const handleCompilePdf = useCallback(() => {
+    triggerHaptic(15);
     if (!markdown.trim()) {
       showGentleToast(
         'まだキャンバスが白紙です。まずは原稿をひとこと書いてみませんか？'
       );
+      setActiveMobileTab('editor');
       return;
     }
 
@@ -277,9 +328,9 @@ export default function Md2PdfStudioPage() {
       window.print();
       setCompileStage('completed');
     }, 650);
-  }, [markdown, showGentleToast]);
+  }, [markdown, showGentleToast, triggerHaptic]);
 
-  // Phase 3-3: Keyboard Shortcut (Cmd/Ctrl + Enter) to trigger PDF compile
+  // Keyboard Shortcut (Cmd/Ctrl + Enter) to trigger PDF compile
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
@@ -293,6 +344,7 @@ export default function Md2PdfStudioPage() {
 
   // Handle clipboard one-click paste
   const handlePasteFromClipboard = async () => {
+    triggerHaptic();
     try {
       const text = await navigator.clipboard.readText();
       if (text && text.trim().length > 0) {
@@ -306,12 +358,43 @@ export default function Md2PdfStudioPage() {
     } catch {
       textareaRef.current?.focus();
       showGentleToast(
-        'エディタにフォーカスしました。Cmd+V / Ctrl+V でそのまま貼り付けられます。'
+        '入力欄を長押しして「ペースト」を選ぶか、Cmd+V で貼り付けられます。'
       );
     }
   };
 
-  // Phase 3-2: Read local .md / .txt file helper
+  // Insert Markdown snippet at current cursor position (Mobile Quick Format Chip Bar)
+  const handleInsertQuickSnippet = (action: QuickFormatAction) => {
+    triggerHaptic();
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setMarkdown((prev) => `${prev}${action.snippet}`);
+      return;
+    }
+
+    const start = textarea.selectionStart ?? markdown.length;
+    const end = textarea.selectionEnd ?? markdown.length;
+    const selected = markdown.slice(start, end);
+
+    let replacement = action.snippet;
+    if (selected.length > 0 && action.id === 'bold') {
+      replacement = `**${selected}**`;
+    } else if (selected.length > 0 && action.id === 'quote') {
+      replacement = `\n> ${selected}\n`;
+    }
+
+    const nextText =
+      markdown.slice(0, start) + replacement + markdown.slice(end);
+    setMarkdown(nextText);
+
+    window.requestAnimationFrame(() => {
+      textarea.focus();
+      const nextCursor = start + replacement.length;
+      textarea.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
+
+  // Read local .md / .txt file helper
   const loadManuscriptFile = useCallback(
     (file: File) => {
       const reader = new FileReader();
@@ -373,12 +456,14 @@ export default function Md2PdfStudioPage() {
 
   // Handle clearing canvas
   const handleClearCanvas = () => {
+    triggerHaptic();
     setMarkdown('');
     showGentleToast('紙面をまっさらな白紙に戻しました。');
   };
 
   // Handle loading sample AI markdown
   const handleLoadSample = () => {
+    triggerHaptic();
     setMarkdown(INITIAL_SAMPLE_MARKDOWN);
     setDocumentCode('DOC-A4-01');
     showGentleToast('サンプルの組版原稿をセットしました。');
@@ -386,6 +471,7 @@ export default function Md2PdfStudioPage() {
 
   // Handle rotating Small Talk
   const handleNextSmallTalk = () => {
+    triggerHaptic();
     setSmallTalkIndex((prev) => (prev + 1) % SMALL_TALK_ITEMS.length);
   };
 
@@ -393,33 +479,36 @@ export default function Md2PdfStudioPage() {
   const isEmpty = markdown.trim().length === 0;
 
   return (
-    <div className="print-root min-h-screen flex flex-col bg-[#FAFAFA] text-[#111111]">
+    <div className="print-root min-h-dvh flex flex-col bg-[#FAFAFA] text-[#111111] pb-24 lg:pb-0">
       {/* ====================================================================
-          TOP NAVIGATION & STRAIGHT ACTION BAR (.no-print)
+          TOP NAVIGATION BAR (Compact Native App Bar on Mobile / Full Studio Bar on Desktop)
           ==================================================================== */}
-      <header className="no-print sticky top-0 z-30 bg-[#FFFFFF] border-b-2 border-[#111111] px-4 sm:px-8 py-3.5">
-        <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-4">
+      <header className="no-print sticky top-0 z-30 bg-[#FFFFFF] border-b-2 border-[#111111] px-3.5 sm:px-6 lg:px-8 py-2.5 lg:py-3.5">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-2 sm:gap-4">
           {/* Brand Identity */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-[#111111] text-[#FFFFFF] border-2 border-[#111111] flex items-center justify-center font-mono font-bold text-sm tracking-tighter shadow-[2px_2px_0px_0px_#E6FF00]">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 bg-[#111111] text-[#FFFFFF] border-2 border-[#111111] flex items-center justify-center font-mono font-bold text-xs sm:text-sm tracking-tighter shadow-[2px_2px_0px_0px_#E6FF00]">
               M↓
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-lg tracking-tight leading-none">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-extrabold text-base sm:text-lg tracking-tight leading-none">
                   md2pdf
                 </span>
-                <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 bg-[#E6FF00] border border-[#111111]">
-                  Typeset Studio
+                <span className="text-[9px] sm:text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 bg-[#E6FF00] border border-[#111111] shrink-0">
+                  Studio
                 </span>
               </div>
-              <p className="text-xs text-[#555555] mt-0.5">
+              <p className="hidden sm:block text-xs text-[#555555] mt-0.5 truncate">
                 思考の断片を、デザイナーが組版したような美しい紙面へ。
+              </p>
+              <p className="sm:hidden text-[10px] font-mono text-[#555555] truncate max-w-[140px]">
+                {isEmpty ? '白紙キャンバス' : `${extractedTitle}.pdf`}
               </p>
             </div>
           </div>
 
-          {/* Straight 3-Step Flow Indicator (Desktop) */}
+          {/* Straight 3-Step Flow Indicator (Desktop XL) */}
           <div className="hidden xl:flex items-center gap-2 text-xs font-mono border-[1.5px] border-[#111111] bg-[#FAFAFA] px-3.5 py-1.5">
             <span className="font-bold">01 ペースト</span>
             <span aria-hidden="true">→</span>
@@ -430,8 +519,45 @@ export default function Md2PdfStudioPage() {
             </span>
           </div>
 
-          {/* Right Controls: Theme Switcher + Stamp Toggle + Primary Compile Button */}
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Mobile Quick Pill Controls (Visible < 1024px) */}
+          <div className="flex lg:hidden items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setTheme((prev) =>
+                  prev === 'monochrome-sans'
+                    ? 'minimal-editorial'
+                    : 'monochrome-sans'
+                );
+              }}
+              aria-label="組版書体テーマを切り替え"
+              className="px-2.5 py-1.5 text-[11px] font-extrabold border-[1.5px] border-[#111111] bg-[#FAFAFA] shadow-[2px_2px_0px_0px_#111111] active:translate-x-[1px] active:translate-y-[1px] flex items-center gap-1"
+            >
+              <span className="w-1.5 h-1.5 bg-[#111111] inline-block" />
+              <span>{theme === 'monochrome-sans' ? 'ゴシック' : '明朝体'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setShowStamp((prev) => !prev);
+              }}
+              aria-pressed={showStamp}
+              aria-label="検印スタンプのON/OFF"
+              className={`px-2 py-1.5 text-[11px] font-mono font-bold border-[1.5px] border-[#111111] transition-colors ${
+                showStamp
+                  ? 'bg-[#111111] text-[#E6FF00] shadow-[2px_2px_0px_0px_#E6FF00]'
+                  : 'bg-[#FFFFFF] text-[#555555]'
+              }`}
+            >
+              {showStamp ? '★印' : '☆印'}
+            </button>
+          </div>
+
+          {/* Desktop Controls (Visible >= 1024px) */}
+          <div className="hidden lg:flex items-center gap-3">
             {/* Theme Switcher */}
             <div
               role="group"
@@ -481,7 +607,7 @@ export default function Md2PdfStudioPage() {
               type="button"
               onClick={handleCompilePdf}
               title="ショートカット: Cmd/Ctrl + Enter"
-              className="px-4 py-2 text-xs sm:text-sm font-extrabold bg-[#E6FF00] text-[#111111] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[5px_5px_0px_0px_#111111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_#111111] transition-all flex items-center gap-2"
+              className="px-4 py-2 text-sm font-extrabold bg-[#E6FF00] text-[#111111] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-[5px_5px_0px_0px_#111111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_#111111] transition-all flex items-center gap-2"
             >
               <span>PDFにコンパイルする</span>
               <span className="font-mono text-[11px] border border-[#111111] bg-[#FFFFFF] px-1.5 py-0.5">
@@ -492,44 +618,47 @@ export default function Md2PdfStudioPage() {
         </div>
       </header>
 
-      {/* Gentle Floating Microcopy Toast (.no-print) */}
+      {/* Gentle Floating Microcopy Toast (.no-print) - Positioned above mobile dock on phones */}
       {toastMessage && (
         <div
           role="status"
           aria-live="polite"
-          className="no-print fixed bottom-6 right-6 z-40 bg-[#111111] text-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#E6FF00] px-4 py-2.5 text-xs font-medium flex items-center gap-2.5"
+          className="no-print fixed bottom-24 lg:bottom-6 inset-x-4 sm:inset-x-auto sm:right-6 z-40 bg-[#111111] text-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#E6FF00] px-4 py-3 text-xs font-medium flex items-center gap-2.5"
         >
-          <span className="inline-block w-2 h-2 bg-[#E6FF00]" />
-          <span>{toastMessage}</span>
+          <span className="inline-block w-2 h-2 shrink-0 bg-[#E6FF00]" />
+          <span className="leading-snug">{toastMessage}</span>
         </div>
       )}
 
+      {/* Hidden File Input for .md / .txt Upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".md,.markdown,.txt,text/markdown,text/plain"
+        onChange={handleFileInputChange}
+        className="hidden"
+      />
+
       {/* ====================================================================
-          MAIN 2-PANE DESIGNER WORKSPACE
+          MAIN WORKSPACE (Native Tab Views on Smartphone / 2-Pane Split on Desktop)
           ==================================================================== */}
-      <main className="print-workspace flex-1 max-w-[1600px] w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6 lg:p-8">
+      <main className="print-workspace flex-1 max-w-[1600px] w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 p-3 sm:p-6 lg:p-8">
         {/* ------------------------------------------------------------------
-            LEFT PANE: MARKDOWN EDITOR, DRAG&DROP, EMPTY STATE & SMALL TALK
+            LEFT PANE: MARKDOWN EDITOR, QUICK FORMAT CHIPS, EMPTY STATE
+            Visible on Desktop OR when activeMobileTab === 'editor'
             ------------------------------------------------------------------ */}
         <section
           aria-label="Markdown原稿エディタ"
-          className="no-print lg:col-span-5 flex flex-col gap-4"
+          className={`no-print lg:col-span-5 flex-col gap-4 ${
+            activeMobileTab === 'editor' ? 'flex' : 'hidden lg:flex'
+          }`}
         >
-          {/* Hidden File Input for .md / .txt Upload */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".md,.markdown,.txt,text/markdown,text/plain"
-            onChange={handleFileInputChange}
-            className="hidden"
-          />
-
           {/* Editor Frame */}
           <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className="relative flex-1 flex flex-col bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] min-h-[540px]"
+            className="relative flex-1 flex flex-col bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] min-h-[calc(100dvh-13.5rem)] lg:min-h-[540px]"
           >
             {/* Drag & Drop Active Overlay */}
             {isDraggingFile && (
@@ -544,11 +673,11 @@ export default function Md2PdfStudioPage() {
             )}
 
             {/* Editor Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b-2 border-[#111111] bg-[#FAFAFA]">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 bg-[#111111] inline-block" />
-                <h2 className="text-xs font-mono font-bold uppercase tracking-wider">
-                  01 / Markdown Manuscript
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2.5 border-b-2 border-[#111111] bg-[#FAFAFA]">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-[#111111] inline-block" />
+                <h2 className="text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider">
+                  01 / Manuscript
                 </h2>
               </div>
 
@@ -556,36 +685,59 @@ export default function Md2PdfStudioPage() {
                 <button
                   type="button"
                   onClick={handlePasteFromClipboard}
-                  className="px-2.5 py-1 text-xs font-bold bg-[#FFFFFF] border-[1.5px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] hover:bg-[#E6FF00] active:translate-x-[1px] active:translate-y-[1px] transition-colors"
+                  className="px-2.5 py-1.5 text-xs font-bold bg-[#E6FF00] sm:bg-[#FFFFFF] border-[1.5px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] hover:bg-[#E6FF00] active:translate-x-[1px] active:translate-y-[1px] transition-colors"
                 >
-                  クリップボード貼付
+                  ペースト
                 </button>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-2.5 py-1 text-xs font-bold bg-[#FFFFFF] border-[1.5px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] hover:bg-[#E6FF00] active:translate-x-[1px] active:translate-y-[1px] transition-colors"
+                  className="px-2.5 py-1.5 text-xs font-bold bg-[#FFFFFF] border-[1.5px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] hover:bg-[#E6FF00] active:translate-x-[1px] active:translate-y-[1px] transition-colors"
                 >
-                  ファイル読込
+                  .md読込
                 </button>
                 <button
                   type="button"
                   onClick={handleLoadSample}
-                  className="px-2.5 py-1 text-xs font-bold bg-[#FFFFFF] border-[1.5px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] hover:bg-[#FAFAFA] active:translate-x-[1px] active:translate-y-[1px] transition-colors"
+                  className="px-2.5 py-1.5 text-xs font-bold bg-[#FFFFFF] border-[1.5px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] hover:bg-[#FAFAFA] active:translate-x-[1px] active:translate-y-[1px] transition-colors"
                 >
-                  サンプル原稿
+                  サンプル
                 </button>
                 <button
                   type="button"
                   onClick={handleClearCanvas}
-                  className="px-2.5 py-1 text-xs font-bold bg-[#FFFFFF] text-[#555555] border-[1.5px] border-[#111111] hover:text-[#111111] hover:bg-[#FAFAFA] transition-colors"
+                  className="px-2 py-1.5 text-xs font-bold bg-[#FFFFFF] text-[#555555] border-[1.5px] border-[#111111] hover:text-[#111111] hover:bg-[#FAFAFA] transition-colors"
                 >
-                  白紙に戻す
+                  白紙へ
                 </button>
               </div>
             </div>
 
-            {/* Document Code / Header Meta Input & PDF Filename Preview */}
-            <div className="px-4 py-2 border-b-[1.5px] border-[#111111] bg-[#FFFFFF] flex flex-wrap items-center justify-between gap-2 text-xs">
+            {/* 1-Tap Quick Markdown Format Chip Bar (Smartphone & Tablet friendly) */}
+            <div
+              aria-label="Markdownクイック挿入バー"
+              className="px-3 py-2 border-b-[1.5px] border-[#111111] bg-[#FFFFFF] flex items-center gap-1.5 overflow-x-auto no-scrollbar"
+            >
+              <span className="text-[10px] font-mono font-bold text-[#555555] shrink-0 mr-1">
+                挿入:
+              </span>
+              {QUICK_FORMAT_ACTIONS.map((action) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  onClick={() => handleInsertQuickSnippet(action)}
+                  className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold bg-[#FAFAFA] border-[1.5px] border-[#111111] hover:bg-[#E6FF00] active:bg-[#E6FF00] active:translate-y-[1px] transition-colors"
+                >
+                  <span className="font-mono text-[10px] font-extrabold px-1 bg-[#FFFFFF] border border-[#111111]">
+                    {action.badge}
+                  </span>
+                  <span>{action.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Desktop Header Code Input Bar */}
+            <div className="hidden sm:flex px-4 py-2 border-b-[1.5px] border-[#111111] bg-[#FFFFFF] flex-wrap items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-2">
                 <label
                   htmlFor="doc-code-input"
@@ -607,7 +759,8 @@ export default function Md2PdfStudioPage() {
                 className="font-mono text-[11px] text-[#555555] truncate max-w-[240px]"
                 title={`保存時の推奨PDF名: ${extractedTitle}.pdf`}
               >
-                出力名: <strong className="text-[#111111]">{extractedTitle}.pdf</strong>
+                出力名:{' '}
+                <strong className="text-[#111111]">{extractedTitle}.pdf</strong>
               </div>
             </div>
 
@@ -617,39 +770,39 @@ export default function Md2PdfStudioPage() {
                 ref={textareaRef}
                 value={markdown}
                 onChange={(e) => setMarkdown(e.target.value)}
-                placeholder="ここにAIが出力したMarkdownテキストを貼り付けるか、.mdファイルをドロップしてください..."
+                placeholder="ここにAIが出力したMarkdownテキストを貼り付けるか、上のボタンから記法を挿入してください..."
                 aria-label="Markdown入力エリア"
-                className="w-full flex-1 p-5 font-mono text-sm leading-relaxed bg-transparent text-[#111111] placeholder:text-[#555555]/50 resize-none focus:outline-none min-h-[420px]"
+                className="w-full flex-1 p-4 sm:p-5 font-mono text-[15px] sm:text-sm leading-relaxed bg-transparent text-[#111111] placeholder:text-[#555555]/50 resize-none focus:outline-none min-h-[340px]"
               />
 
               {isEmpty && (
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-[#FFFFFF]/95">
-                  <EmptyCanvasIllustration className="w-40 h-40 mb-2" />
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center p-5 text-center bg-[#FFFFFF]/95">
+                  <EmptyCanvasIllustration className="w-32 h-32 sm:w-40 sm:h-40 mb-2" />
                   <p className="text-sm font-bold text-[#111111]">
                     まっさらなキャンバスです。
                   </p>
                   <p className="text-xs text-[#555555] max-w-xs mt-1 leading-relaxed">
-                    AIが紡いだMarkdownテキストをここにそっと置くか、.mdファイルをドロップしてみてください。すぐ隣で美しい紙面に生まれ変わります。
+                    AIが紡いだMarkdownテキストをここにそっと置いてみてください。見出しも表組みも、美しいA4紙面に生まれ変わります。
                   </p>
-                  <div className="pointer-events-auto mt-4 flex flex-wrap items-center justify-center gap-2.5">
+                  <div className="pointer-events-auto mt-4 flex flex-wrap items-center justify-center gap-2">
                     <button
                       type="button"
                       onClick={handlePasteFromClipboard}
-                      className="px-3.5 py-1.5 text-xs font-extrabold bg-[#E6FF00] border-2 border-[#111111] shadow-[3px_3px_0px_0px_#111111] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-transform"
+                      className="px-4 py-2 text-xs font-extrabold bg-[#E6FF00] border-2 border-[#111111] shadow-[3px_3px_0px_0px_#111111] active:translate-x-[1px] active:translate-y-[1px]"
                     >
-                      クリップボードから貼り付ける
+                      クリップボードから貼付
                     </button>
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-3.5 py-1.5 text-xs font-bold bg-[#FFFFFF] border-2 border-[#111111] shadow-[3px_3px_0px_0px_#111111] hover:bg-[#FAFAFA]"
+                      className="px-3.5 py-2 text-xs font-bold bg-[#FFFFFF] border-2 border-[#111111] shadow-[3px_3px_0px_0px_#111111]"
                     >
-                      .md ファイルを選ぶ
+                      .md ファイル選択
                     </button>
                     <button
                       type="button"
                       onClick={handleLoadSample}
-                      className="px-3.5 py-1.5 text-xs font-bold bg-[#FFFFFF] border-2 border-[#111111] shadow-[3px_3px_0px_0px_#111111] hover:bg-[#FAFAFA]"
+                      className="px-3.5 py-2 text-xs font-bold bg-[#FFFFFF] border-2 border-[#111111] shadow-[3px_3px_0px_0px_#111111]"
                     >
                       サンプル原稿を試す
                     </button>
@@ -659,25 +812,25 @@ export default function Md2PdfStudioPage() {
             </div>
 
             {/* Status Footer inside Editor */}
-            <div className="px-4 py-2.5 border-t-2 border-[#111111] bg-[#FAFAFA] flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-[#555555]">
+            <div className="px-3.5 sm:px-4 py-2.5 border-t-2 border-[#111111] bg-[#FAFAFA] flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-[#555555]">
               <div className="flex items-center gap-3">
-                <span>文字数: {metrics.chars.toLocaleString()}</span>
-                <span>行数: {metrics.lines.toLocaleString()}</span>
-                <span>見出し数: {metrics.headings}</span>
+                <span>{metrics.chars.toLocaleString()} 文字</span>
+                <span>{metrics.lines.toLocaleString()} 行</span>
+                <span>見出し {metrics.headings}</span>
               </div>
-              <div className="flex items-center gap-2 text-[#111111] font-bold">
+              <div className="flex items-center gap-1.5 text-[#111111] font-bold">
                 <span className="w-2 h-2 rounded-full bg-[#111111] inline-block" />
                 <span>
-                  ローカル自動保存済{lastSavedTime ? ` (${lastSavedTime})` : ''}
+                  自動保存済{lastSavedTime ? ` ${lastSavedTime}` : ''}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Built-in "Small Talk" (組版の豆知識) Bar */}
+          {/* Built-in "Small Talk" (組版の豆知識) Bar on Desktop */}
           <aside
             aria-label="Small Talk 組版の豆知識"
-            className="bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] p-4 flex items-start justify-between gap-4"
+            className="hidden lg:flex bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] p-4 items-start justify-between gap-4"
           >
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -704,68 +857,246 @@ export default function Md2PdfStudioPage() {
         </section>
 
         {/* ------------------------------------------------------------------
+            MOBILE TAB 03: TYPESETTING STUDIO & SMALL TALK LOUNGE (.no-print)
+            Visible only on Smartphone when activeMobileTab === 'studio'
+            ------------------------------------------------------------------ */}
+        {activeMobileTab === 'studio' && (
+          <section
+            aria-label="組版設定と豆知識"
+            className="no-print lg:hidden flex flex-col gap-4"
+          >
+            {/* Typography Theme Card */}
+            <div className="bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-extrabold uppercase px-2 py-0.5 bg-[#E6FF00] border border-[#111111]">
+                  TYPOGRAPHY THEME
+                </span>
+                <span className="text-[11px] font-mono text-[#555555]">
+                  書体と行送りの設計
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setTheme('monochrome-sans');
+                  }}
+                  className={`p-3.5 text-left border-2 border-[#111111] transition-all flex items-start justify-between gap-3 ${
+                    theme === 'monochrome-sans'
+                      ? 'bg-[#E6FF00] shadow-[3px_3px_0px_0px_#111111]'
+                      : 'bg-[#FAFAFA]'
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-extrabold text-[#111111]">
+                      Monochrome Sans（モダンゴシック）
+                    </p>
+                    <p className="text-xs text-[#555555] mt-1 leading-relaxed">
+                      Inter + Noto Sans JP。企画書・技術仕様書・AI要約レポートに最適な、ソリッドで現代的な組版。
+                    </p>
+                  </div>
+                  <span className="font-mono text-xs font-extrabold px-2 py-0.5 bg-[#FFFFFF] border border-[#111111] shrink-0">
+                    {theme === 'monochrome-sans' ? '選択中' : '選択'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setTheme('minimal-editorial');
+                  }}
+                  className={`p-3.5 text-left border-2 border-[#111111] transition-all flex items-start justify-between gap-3 ${
+                    theme === 'minimal-editorial'
+                      ? 'bg-[#E6FF00] shadow-[3px_3px_0px_0px_#111111]'
+                      : 'bg-[#FAFAFA]'
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-extrabold text-[#111111]">
+                      Minimal Editorial（知的明朝）
+                    </p>
+                    <p className="text-xs text-[#555555] mt-1 leading-relaxed">
+                      Newsreader + しっぽり明朝。エッセイ・論文・長文記事を、書籍のように静かに読ませる組版。
+                    </p>
+                  </div>
+                  <span className="font-mono text-xs font-extrabold px-2 py-0.5 bg-[#FFFFFF] border border-[#111111] shrink-0">
+                    {theme === 'minimal-editorial' ? '選択中' : '選択'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Stamp & Header Metadata Card */}
+            <div className="bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-mono font-extrabold uppercase px-2 py-0.5 bg-[#111111] text-[#FFFFFF]">
+                  PAPER DETAILS
+                </span>
+                <span className="text-[11px] font-mono text-[#555555]">
+                  刻印とファイル名
+                </span>
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="mobile-doc-code-input"
+                  className="block text-xs font-bold text-[#111111]"
+                >
+                  紙面ヘッダー刻印コード
+                </label>
+                <input
+                  id="mobile-doc-code-input"
+                  type="text"
+                  value={documentCode}
+                  onChange={(e) => setDocumentCode(e.target.value)}
+                  maxLength={28}
+                  placeholder="DOC-A4-01"
+                  className="w-full font-mono text-sm font-bold bg-[#FAFAFA] px-3 py-2 border-2 border-[#111111] focus:outline-none focus:bg-[#FFFFFF]"
+                />
+                <p className="text-[11px] font-mono text-[#555555]">
+                  PDF保存時の推奨ファイル名:{' '}
+                  <strong className="text-[#111111]">{extractedTitle}.pdf</strong>
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-[#111111] flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-extrabold">
+                    FINE PRESS エディトリアル検印スタンプ
+                  </p>
+                  <p className="text-[11px] text-[#555555]">
+                    A4紙面の右上にオリジナルモノライン検印を刻印します
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic();
+                    setShowStamp((prev) => !prev);
+                  }}
+                  className={`px-3.5 py-2 text-xs font-mono font-extrabold border-2 border-[#111111] shrink-0 ${
+                    showStamp
+                      ? 'bg-[#E6FF00] text-[#111111] shadow-[2px_2px_0px_0px_#111111]'
+                      : 'bg-[#FAFAFA] text-[#555555]'
+                  }`}
+                >
+                  {showStamp ? '★ ON' : '☆ OFF'}
+                </button>
+              </div>
+            </div>
+
+            {/* Small Talk Card on Mobile */}
+            <aside
+              aria-label="Small Talk 組版の豆知識"
+              className="bg-[#FFFFFF] border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] p-4 flex flex-col gap-3"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 text-[10px] font-mono font-extrabold bg-[#E6FF00] border border-[#111111]">
+                    SMALL TALK
+                  </span>
+                  <span className="text-[11px] font-mono font-bold text-[#555555]">
+                    {currentSmallTalk.category}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleNextSmallTalk}
+                  className="px-2.5 py-1 text-xs font-mono font-bold bg-[#FAFAFA] border-[1.5px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] active:bg-[#E6FF00]"
+                >
+                  別の豆知識へ →
+                </button>
+              </div>
+              <p className="text-xs text-[#111111] leading-relaxed">
+                {currentSmallTalk.text}
+              </p>
+            </aside>
+          </section>
+        )}
+
+        {/* ------------------------------------------------------------------
             RIGHT PANE: REAL-TIME A4 TYPESETTING PREVIEW
+            Always mounted in DOM so @media print works from ANY mobile tab!
             ------------------------------------------------------------------ */}
         <section
           aria-label="A4紙面リアルタイムプレビュー"
-          className="print-pane-right lg:col-span-7 flex flex-col"
+          className={`print-pane-right lg:col-span-7 flex-col ${
+            activeMobileTab === 'preview' ? 'flex' : 'hidden lg:flex'
+          }`}
         >
           {/* Preview Bar Header (.no-print) */}
-          <div className="no-print mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+          <div className="no-print mb-2.5 flex flex-wrap items-center justify-between gap-2 px-1">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 bg-[#111111] inline-block" />
-              <h2 className="text-xs font-mono font-bold uppercase tracking-wider">
-                02 / Live A4 Sheet Preview (210mm × 297mm)
+              <span className="w-2 h-2 bg-[#111111] inline-block" />
+              <h2 className="text-[11px] sm:text-xs font-mono font-bold uppercase tracking-wider">
+                02 / Live A4 Paper (210 × 297mm)
               </h2>
             </div>
-            <div className="text-xs font-mono text-[#555555]">
-              Theme:{' '}
-              <strong className="text-[#111111]">
-                {theme === 'monochrome-sans'
-                  ? 'Monochrome Sans (モダンゴシック)'
-                  : 'Minimal Editorial (知的明朝)'}
-              </strong>
+
+            {/* Mobile Paper Scale Toggle & Desktop Theme Label */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic();
+                  setMobileCompactScale((prev) => !prev);
+                }}
+                className="lg:hidden px-2.5 py-1 text-[11px] font-mono font-bold bg-[#FFFFFF] border-[1.5px] border-[#111111] shadow-[2px_2px_0px_0px_#111111] active:bg-[#E6FF00]"
+              >
+                {mobileCompactScale ? '標準文字サイズに戻す' : '紙面全体を俯瞰縮小'}
+              </button>
+              <div className="hidden sm:block text-xs font-mono text-[#555555]">
+                Theme:{' '}
+                <strong className="text-[#111111]">
+                  {theme === 'monochrome-sans'
+                    ? 'Monochrome Sans'
+                    : 'Minimal Editorial'}
+                </strong>
+              </div>
             </div>
           </div>
 
-          {/* Scrollable A4 Desk Viewport */}
-          <div className="print-canvas-scroller flex-1 bg-[#FFFFFF]/60 border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] p-4 sm:p-8 overflow-x-auto flex justify-center items-start">
+          {/* Scrollable A4 Desk Viewport (Container Query Root) */}
+          <div className="print-canvas-scroller flex-1 bg-[#FFFFFF]/60 border-2 border-[#111111] shadow-[4px_4px_0px_0px_#111111] p-2.5 sm:p-6 lg:p-8 overflow-x-auto flex justify-center items-start">
             {/* THE A4 SHEET */}
             <article
               className={`a4-preview-sheet md2pdf-prose ${
                 theme === 'monochrome-sans'
                   ? 'theme-monochrome-sans'
                   : 'theme-minimal-editorial'
-              }`}
+              } ${mobileCompactScale ? 'mobile-compact-scale' : ''}`}
             >
               {/* Optional Playful Stamp on Top Right of Sheet */}
               {showStamp && !isEmpty && (
-                <div className="float-right ml-4 mb-2 -mt-2 select-none">
+                <div className="float-right ml-3 sm:ml-4 mb-2 -mt-1 sm:-mt-2 select-none">
                   <PlayfulEditorialStamp
-                    className="w-20 h-20"
+                    className="w-14 h-14 sm:w-20 sm:h-20"
                     editionLabel="FINE PRESS"
                   />
                 </div>
               )}
 
               {/* Subtle Editorial Running Header */}
-              <div className="flex items-center justify-between border-b border-[#111111] pb-2 mb-6 text-[8pt] font-mono tracking-widest uppercase text-[#555555]">
-                <span>{documentCode || 'MD2PDF STUDIO'}</span>
-                <span>
+              <div className="flex items-center justify-between border-b border-[#111111] pb-2 mb-5 sm:mb-6 text-[7.5pt] sm:text-[8pt] font-mono tracking-widest uppercase text-[#555555] gap-2">
+                <span className="truncate">{documentCode || 'MD2PDF STUDIO'}</span>
+                <span className="shrink-0">
                   {theme === 'monochrome-sans'
-                    ? 'SPEC // MONOCHROME SANS'
-                    : 'SPEC // MINIMAL EDITORIAL'}
+                    ? 'SPEC // SANS'
+                    : 'SPEC // EDITORIAL'}
                 </span>
               </div>
 
               {/* Rendered Content or Blank Sheet Hint */}
               {isEmpty ? (
-                <div className="py-24 text-center text-[#555555]">
+                <div className="py-20 text-center text-[#555555]">
                   <p className="font-mono text-xs uppercase tracking-widest mb-2">
                     [ BLANK A4 SHEET ]
                   </p>
                   <p className="text-xs">
-                    左側のキャンバスに原稿を入力すると、ここにリアルタイムで組版されます。
+                    原稿タブでテキストを入力すると、ここにリアルタイムで組版されます。
                   </p>
                 </div>
               ) : (
@@ -827,40 +1158,42 @@ export default function Md2PdfStudioPage() {
                         );
                       case 'table':
                         return (
-                          <table key={idx}>
-                            <thead>
-                              <tr>
-                                {block.headers.map((header, hIdx) => (
-                                  <th
-                                    key={hIdx}
-                                    style={{
-                                      textAlign:
-                                        block.alignments[hIdx] || 'left',
-                                    }}
-                                  >
-                                    {renderInlineTokens(header)}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {block.rows.map((row, rIdx) => (
-                                <tr key={rIdx}>
-                                  {block.headers.map((_, cIdx) => (
-                                    <td
-                                      key={cIdx}
+                          <div key={idx} className="table-scroll-wrapper">
+                            <table>
+                              <thead>
+                                <tr>
+                                  {block.headers.map((header, hIdx) => (
+                                    <th
+                                      key={hIdx}
                                       style={{
                                         textAlign:
-                                          block.alignments[cIdx] || 'left',
+                                          block.alignments[hIdx] || 'left',
                                       }}
                                     >
-                                      {renderInlineTokens(row[cIdx] ?? '')}
-                                    </td>
+                                      {renderInlineTokens(header)}
+                                    </th>
                                   ))}
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {block.rows.map((row, rIdx) => (
+                                  <tr key={rIdx}>
+                                    {block.headers.map((_, cIdx) => (
+                                      <td
+                                        key={cIdx}
+                                        style={{
+                                          textAlign:
+                                            block.alignments[cIdx] || 'left',
+                                        }}
+                                      >
+                                        {renderInlineTokens(row[cIdx] ?? '')}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         );
                       case 'hr':
                         return <hr key={idx} />;
@@ -872,9 +1205,9 @@ export default function Md2PdfStudioPage() {
               )}
 
               {/* Subtle Editorial Running Footer */}
-              <footer className="mt-12 pt-3 border-t border-[#111111] flex items-center justify-between text-[7.5pt] font-mono text-[#555555]">
+              <footer className="mt-10 sm:mt-12 pt-3 border-t border-[#111111] flex items-center justify-between text-[7pt] sm:text-[7.5pt] font-mono text-[#555555]">
                 <span>TYPESET BY MD2PDF — CLIENT-SIDE VECTOR ENGINE</span>
-                <span>A4 STANDARD (210 × 297 MM)</span>
+                <span>A4 STANDARD</span>
               </footer>
             </article>
           </div>
@@ -882,8 +1215,108 @@ export default function Md2PdfStudioPage() {
       </main>
 
       {/* ====================================================================
+          SMARTPHONE-NATIVE BOTTOM NAVIGATION DOCK (< 1024px, .no-print)
+          Thumb-friendly segmented tabs + Acid Yellow primary PDF Compile CTA
+          ==================================================================== */}
+      <nav
+        aria-label="スマートフォン用ワークスペース切り替えドック"
+        className="no-print lg:hidden fixed bottom-0 inset-x-0 z-30 bg-[#FFFFFF] border-t-2 border-[#111111] px-3 pt-2 pb-safe-dock shadow-[0px_-4px_0px_0px_#111111]"
+      >
+        <div className="max-w-lg mx-auto flex items-stretch gap-2">
+          {/* Segmented Mode Switcher */}
+          <div className="flex-1 grid grid-cols-3 border-2 border-[#111111] bg-[#FAFAFA] shadow-[2px_2px_0px_0px_#111111]">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setActiveMobileTab('editor');
+              }}
+              aria-current={activeMobileTab === 'editor' ? 'page' : undefined}
+              className={`py-2 px-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+                activeMobileTab === 'editor'
+                  ? 'bg-[#111111] text-[#FFFFFF]'
+                  : 'bg-[#FFFFFF] text-[#111111]'
+              }`}
+            >
+              <span className="font-mono text-[9px] font-bold opacity-80">
+                01 EDIT
+              </span>
+              <span className="text-xs font-extrabold leading-none">
+                原稿を書く
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setActiveMobileTab('preview');
+              }}
+              aria-current={activeMobileTab === 'preview' ? 'page' : undefined}
+              className={`py-2 px-1 border-x-2 border-[#111111] flex flex-col items-center justify-center gap-0.5 transition-colors ${
+                activeMobileTab === 'preview'
+                  ? 'bg-[#111111] text-[#FFFFFF]'
+                  : 'bg-[#FFFFFF] text-[#111111]'
+              }`}
+            >
+              <span className="font-mono text-[9px] font-bold opacity-80">
+                02 PAPER
+              </span>
+              <span className="text-xs font-extrabold leading-none flex items-center gap-1">
+                <span>紙面を見る</span>
+                {!isEmpty && (
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      activeMobileTab === 'preview'
+                        ? 'bg-[#E6FF00]'
+                        : 'bg-[#111111]'
+                    }`}
+                  />
+                )}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic();
+                setActiveMobileTab('studio');
+              }}
+              aria-current={activeMobileTab === 'studio' ? 'page' : undefined}
+              className={`py-2 px-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
+                activeMobileTab === 'studio'
+                  ? 'bg-[#111111] text-[#FFFFFF]'
+                  : 'bg-[#FFFFFF] text-[#111111]'
+              }`}
+            >
+              <span className="font-mono text-[9px] font-bold opacity-80">
+                03 STUDIO
+              </span>
+              <span className="text-xs font-extrabold leading-none">
+                組版・豆知識
+              </span>
+            </button>
+          </div>
+
+          {/* One-Thumb Primary PDF Compile CTA */}
+          <button
+            type="button"
+            onClick={handleCompilePdf}
+            className="shrink-0 px-4 py-2 bg-[#E6FF00] text-[#111111] border-2 border-[#111111] shadow-[3px_3px_0px_0px_#111111] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_#111111] flex flex-col items-center justify-center"
+          >
+            <span className="font-mono text-[9px] font-extrabold uppercase tracking-tighter leading-none">
+              COMPILE A4
+            </span>
+            <span className="text-xs font-extrabold leading-tight mt-0.5">
+              PDF出力
+            </span>
+          </button>
+        </div>
+      </nav>
+
+      {/* ====================================================================
           COMPILATION & COMPLETION MODAL DIALOG (.no-print)
-          Uses modern <dialog closedby="any"> + scroll containment
+          Native Bottom Sheet on Smartphone / Centered Modal on Desktop
           ==================================================================== */}
       <dialog
         ref={dialogRef}
@@ -892,9 +1325,15 @@ export default function Md2PdfStudioPage() {
         className="md2pdf-dialog no-print"
       >
         <div className="p-6 sm:p-8 flex flex-col items-center text-center">
+          {/* Mobile Bottom Sheet Pill Handle */}
+          <div
+            aria-hidden="true"
+            className="sm:hidden w-10 h-1 bg-[#111111] mb-4"
+          />
+
           {compileStage === 'compiling' ? (
             <>
-              <CompilingTypesetterIllustration className="w-36 h-36 mb-3" />
+              <CompilingTypesetterIllustration className="w-32 h-32 sm:w-36 sm:h-36 mb-3" />
               <span className="px-2 py-0.5 text-[10px] font-mono font-extrabold bg-[#E6FF00] border border-[#111111] uppercase">
                 TYPESETTING IN PROGRESS
               </span>
@@ -910,7 +1349,7 @@ export default function Md2PdfStudioPage() {
             </>
           ) : (
             <>
-              <CompletedPressIllustration className="w-40 h-40 mb-2" />
+              <CompletedPressIllustration className="w-36 h-36 sm:w-40 sm:h-40 mb-2" />
               <span className="px-2 py-0.5 text-[10px] font-mono font-extrabold bg-[#E6FF00] border border-[#111111] uppercase">
                 COMPLETED!
               </span>
@@ -921,21 +1360,21 @@ export default function Md2PdfStudioPage() {
                 紙面の支度が整いました。
               </h3>
               <p className="text-xs text-[#555555] mt-1.5 leading-relaxed max-w-xs">
-                ブラウザの印刷ダイアログで「PDFに保存」を選ぶと、『{extractedTitle}
-                』としてベクター品質のまま保存できます。
+                印刷プレビューまたは共有メニューから「PDFに保存」を選ぶと、『
+                {extractedTitle}』としてベクター品質のまま保存できます。
               </p>
-              <div className="mt-6 flex items-center gap-3 w-full">
+              <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full">
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="flex-1 py-2.5 px-4 text-xs font-extrabold bg-[#E6FF00] text-[#111111] border-2 border-[#111111] shadow-[3px_3px_0px_0px_#111111] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-transform"
+                  className="flex-1 py-3 sm:py-2.5 px-4 text-xs font-extrabold bg-[#E6FF00] text-[#111111] border-2 border-[#111111] shadow-[3px_3px_0px_0px_#111111] active:translate-x-[1px] active:translate-y-[1px]"
                 >
-                  もう一度印刷ダイアログを開く
+                  もう一度印刷画面を開く
                 </button>
                 <form method="dialog" className="flex-1">
                   <button
                     type="submit"
-                    className="w-full py-2.5 px-4 text-xs font-bold bg-[#FFFFFF] text-[#111111] border-2 border-[#111111] shadow-[3px_3px_0px_0px_#111111] hover:bg-[#FAFAFA]"
+                    className="w-full py-3 sm:py-2.5 px-4 text-xs font-bold bg-[#FFFFFF] text-[#111111] border-2 border-[#111111] shadow-[3px_3px_0px_0px_#111111] hover:bg-[#FAFAFA]"
                   >
                     ワークスペースに戻る
                   </button>

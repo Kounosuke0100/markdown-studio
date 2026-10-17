@@ -1,0 +1,18 @@
+{
+  "name": "md2pdf — Typeset Studio",
+  "short_name": "md2pdf",
+  "description": "AIが出力したMarkdownテキストを、プロフェッショナルな印刷品質のPDFへと瞬時に組版・コンパイルするスタジオ",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#FAFAFA",
+  "theme_color": "#111111",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

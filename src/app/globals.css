@@ -20,12 +20,14 @@
 
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
 body {
   margin: 0;
   padding: 0;
+  min-height: 100dvh;
   background-color: var(--bg-canvas);
   color: var(--ink-black);
   font-family: var(--font-sans);
@@ -41,8 +43,22 @@ body {
   color: var(--ink-black);
 }
 
+/* Hide scrollbars on horizontal chip bars while keeping scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Safe area padding for iOS Home Indicator */
+.pb-safe-dock {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+}
+
 /* ==========================================================================
-   2. NATIVE MODAL DIALOG & SCROLL CONTAINMENT
+   2. NATIVE MODAL DIALOG (MOBILE BOTTOM SHEET & DESKTOP MODAL)
    ========================================================================== */
 dialog.md2pdf-dialog {
   padding: 0;
@@ -53,6 +69,20 @@ dialog.md2pdf-dialog {
   max-width: 28rem;
   width: calc(100% - 2rem);
   margin: auto;
+}
+
+@media (max-width: 639px) {
+  dialog.md2pdf-dialog {
+    max-width: 100%;
+    width: 100%;
+    margin: auto 0 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-top: 2.5px solid #111111;
+    box-shadow: 0px -6px 0px 0px #111111;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
 dialog.md2pdf-dialog:modal {
@@ -66,8 +96,12 @@ dialog.md2pdf-dialog::backdrop {
 }
 
 /* ==========================================================================
-   3. SCREEN A4 SHEET PREVIEW CONTAINER & TYPOGRAPHY THEMES
+   3. CONTAINER-QUERY A4 SHEET PREVIEW & TYPOGRAPHY THEMES
    ========================================================================== */
+.print-canvas-scroller {
+  container-type: inline-size;
+}
+
 .a4-preview-sheet {
   width: 210mm;
   min-height: 297mm;
@@ -221,10 +255,17 @@ dialog.md2pdf-dialog::backdrop {
   background-color: #FAFAFA;
 }
 
+.md2pdf-prose .table-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 14pt 0;
+}
+
 .md2pdf-prose table {
   width: 100%;
   border-collapse: collapse;
-  margin: 14pt 0;
+  margin: 0;
   font-size: 9pt;
   border: 1.5px solid #111111;
 }
@@ -254,6 +295,58 @@ dialog.md2pdf-dialog::backdrop {
   margin: 16pt 0;
 }
 
+/* Container-adaptive A4 Sheet on Smartphone & Narrow Containers */
+@container (width < 820px) {
+  .a4-preview-sheet {
+    width: 100%;
+    min-height: auto;
+    aspect-ratio: 210 / 297;
+    padding: clamp(1.15rem, 5cqi, 2.25rem) clamp(1rem, 4.5cqi, 2rem);
+    box-shadow: 4px 4px 0px 0px #111111;
+  }
+
+  .a4-preview-sheet.mobile-compact-scale {
+    font-size: 85%;
+  }
+
+  .md2pdf-prose h1 {
+    font-size: clamp(1.25rem, 5.2cqi, 22pt);
+    margin-bottom: 10pt;
+    padding-bottom: 6pt;
+  }
+
+  .md2pdf-prose h2 {
+    font-size: clamp(1.05rem, 3.8cqi, 14.5pt);
+    margin-top: 14pt;
+    margin-bottom: 6pt;
+  }
+
+  .md2pdf-prose h3 {
+    font-size: clamp(0.95rem, 3.2cqi, 11.5pt);
+    margin-top: 10pt;
+  }
+
+  .md2pdf-prose p,
+  .md2pdf-prose ul,
+  .md2pdf-prose ol {
+    font-size: clamp(0.84rem, 2.7cqi, 10pt);
+  }
+
+  .md2pdf-prose blockquote {
+    font-size: clamp(0.8rem, 2.5cqi, 9.5pt);
+    padding: 7pt 10pt;
+  }
+
+  .md2pdf-prose pre {
+    font-size: clamp(0.75rem, 2.3cqi, 8.5pt);
+    padding: 8pt 10pt;
+  }
+
+  .md2pdf-prose table {
+    font-size: clamp(0.75rem, 2.3cqi, 9pt);
+  }
+}
+
 /* ==========================================================================
    4. PROFESSIONAL PRINT & PDF COMPILATION CSS (@page & @media print)
    ========================================================================== */
@@ -275,6 +368,7 @@ dialog.md2pdf-dialog::backdrop {
   html,
   body {
     width: 210mm;
+    min-height: 0 !important;
     background-color: #FFFFFF !important;
     color: #111111 !important;
     margin: 0 !important;
@@ -282,18 +376,19 @@ dialog.md2pdf-dialog::backdrop {
     overflow: visible !important;
   }
 
-  /* Completely hide all web UI controls, editors, headers, and modals */
+  /* Completely hide all web UI controls, mobile bottom dock, editors, headers, and modals */
   .no-print,
   dialog.md2pdf-dialog {
     display: none !important;
   }
 
-  /* Reset layout wrappers so the print flow occupies 100% of the @page box */
+  /* Reset layout wrappers (even if hidden on active mobile tab) so print occupies 100% of @page */
   .print-root,
   .print-workspace,
   .print-pane-right,
   .print-canvas-scroller {
     display: block !important;
+    container-type: normal !important;
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
@@ -311,11 +406,13 @@ dialog.md2pdf-dialog::backdrop {
   .a4-preview-sheet {
     width: 100% !important;
     min-height: 0 !important;
+    aspect-ratio: auto !important;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
     box-shadow: none !important;
     background-color: #FFFFFF !important;
+    font-size: 10pt !important;
   }
 
   /* Strict Page-Break & Typesetting Protection Rules */
@@ -333,12 +430,14 @@ dialog.md2pdf-dialog::backdrop {
 
   .md2pdf-prose pre,
   .md2pdf-prose blockquote,
+  .md2pdf-prose .table-scroll-wrapper,
   .md2pdf-prose table,
   .md2pdf-prose figure,
   .md2pdf-prose .print-avoid-break {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
     max-width: 100% !important;
+    overflow: visible !important;
   }
 
   .md2pdf-prose thead {
